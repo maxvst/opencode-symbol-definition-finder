@@ -86,5 +86,66 @@ process(value);
       expect(result.matches[0]?.symbol).toBe('process');
     });
   });
+
+  describe('Multiple fragment occurrences returning multiple positions', () => {
+    it('should return three positions when fetch is called in three class methods', () => {
+      const code = [
+        'class Service {',
+        '  getData() { return fetch(url); }',
+        '  processData() { return fetch(url); }',
+        '  saveData() { return fetch(url); }',
+        '}'
+      ].join('\n');
+
+      const result = finder.find({
+        code,
+        symbol: 'fetch',
+        fragment: 'fetch(url)'
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.matches).toHaveLength(3);
+
+      expect(result.matches[0]?.position.line).toBe(2);
+      expect(result.matches[0]?.position.column).toBe(22);
+      expect(result.matches[0]?.symbol).toBe('fetch');
+
+      expect(result.matches[1]?.position.line).toBe(3);
+      expect(result.matches[1]?.position.column).toBe(26);
+      expect(result.matches[1]?.symbol).toBe('fetch');
+
+      expect(result.matches[2]?.position.line).toBe(4);
+      expect(result.matches[2]?.position.column).toBe(23);
+      expect(result.matches[2]?.symbol).toBe('fetch');
+    });
+
+    it('should return all getValue positions across variable assignments', () => {
+      const code = [
+        'const x = getValue();',
+        'const y = getValue();',
+        'const z = getValue();'
+      ].join('\n');
+
+      const result = finder.find({
+        code,
+        symbol: 'getValue',
+        fragment: 'getValue()'
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.matches).toHaveLength(3);
+
+      expect(result.matches[0]?.position.line).toBe(1);
+      expect(result.matches[0]?.position.column).toBe(11);
+      expect(result.matches[0]?.symbol).toBe('getValue');
+
+      expect(result.matches[1]?.position.line).toBe(2);
+      expect(result.matches[1]?.position.column).toBe(11);
+      expect(result.matches[1]?.symbol).toBe('getValue');
+
+      expect(result.matches[2]?.position.line).toBe(3);
+      expect(result.matches[2]?.position.column).toBe(11);
+      expect(result.matches[2]?.symbol).toBe('getValue');
+    });
+  });
 });
-// TODO: добавить тесты, которые находили бы в коде несколько заданных фрагментов и возвращали несколько позиций

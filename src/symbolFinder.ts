@@ -29,6 +29,22 @@ export class SymbolFinder {
       };
     }
 
+    if (!this.isValidSymbol(symbol)) {
+      return {
+        success: false,
+        matches: [],
+        error: 'Symbol contains invalid characters'
+      };
+    }
+
+    if (!this.symbolInFragment(symbol, fragment)) {
+      return {
+        success: false,
+        matches: [],
+        error: 'Symbol not found in fragment'
+      };
+    }
+
     const lines = code.split('\n');
     const matches: SymbolMatch[] = [];
     const normalizedFragment = normalizeForComparison(fragment);
@@ -71,6 +87,17 @@ export class SymbolFinder {
       success: true,
       matches: this.deduplicateMatches(matches)
     };
+  }
+
+  private isValidSymbol(symbol: string): boolean {
+    const trimmed = symbol.trim();
+    if (trimmed !== symbol) return false;
+    return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimmed);
+  }
+
+  private symbolInFragment(symbol: string, fragment: string): boolean {
+    const pattern = new RegExp(`\\b${escapeRegExp(symbol)}\\b`);
+    return pattern.test(fragment);
   }
 
   private createSymbolPattern(symbol: string): RegExp {
