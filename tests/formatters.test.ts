@@ -30,6 +30,8 @@ describe('Formatters', () => {
       expect(parsed.matches[0].symbol).toBe('testFunc');
       expect(parsed.matches[0].position.line).toBe(5);
       expect(parsed.matches[0].position.column).toBe(10);
+      expect(parsed.matches[0].context).toBe('function testFunc() {}');
+      expect(parsed.error).toBeUndefined();
     });
 
     it('should format result with no matches', () => {
@@ -44,6 +46,7 @@ describe('Formatters', () => {
 
       expect(parsed.success).toBe(true);
       expect(parsed.matches).toHaveLength(0);
+      expect(parsed.matches).toEqual([]);
       expect(parsed.error).toBe('No matches found');
     });
 
@@ -58,22 +61,23 @@ describe('Formatters', () => {
       const parsed = JSON.parse(output);
 
       expect(parsed.success).toBe(false);
+      expect(parsed.matches).toHaveLength(0);
       expect(parsed.error).toBe('Invalid input');
     });
 
-    it('should format multiple matches', () => {
+    it('should format multiple matches with exact data', () => {
       const result: FinderResult = {
         success: true,
         matches: [
           {
             symbol: 'func',
             position: { line: 1, column: 1 },
-            context: 'line1'
+            context: 'function func() {}'
           },
           {
             symbol: 'func',
             position: { line: 5, column: 10 },
-            context: 'line5'
+            context: 'func();'
           }
         ]
       };
@@ -81,7 +85,16 @@ describe('Formatters', () => {
       const output = formatter.format(result);
       const parsed = JSON.parse(output);
 
+      expect(parsed.success).toBe(true);
       expect(parsed.matches).toHaveLength(2);
+      expect(parsed.matches[0].symbol).toBe('func');
+      expect(parsed.matches[0].position.line).toBe(1);
+      expect(parsed.matches[0].position.column).toBe(1);
+      expect(parsed.matches[0].context).toBe('function func() {}');
+      expect(parsed.matches[1].symbol).toBe('func');
+      expect(parsed.matches[1].position.line).toBe(5);
+      expect(parsed.matches[1].position.column).toBe(10);
+      expect(parsed.matches[1].context).toBe('func();');
     });
   });
 
@@ -92,7 +105,7 @@ describe('Formatters', () => {
       formatter = new LLMFormatter();
     });
 
-    it('should format successful result with matches', () => {
+    it('should format successful result with single match', () => {
       const result: FinderResult = {
         success: true,
         matches: [
@@ -108,9 +121,12 @@ describe('Formatters', () => {
 
       expect(output).toContain('STATUS: FOUND');
       expect(output).toContain('MATCH_COUNT: 1');
+      expect(output).toContain('MATCH_1:');
       expect(output).toContain('SYMBOL: myFunction');
       expect(output).toContain('LINE: 10');
       expect(output).toContain('COLUMN: 5');
+      expect(output).toContain('CONTEXT:');
+      expect(output).toContain('const result = myFunction(arg);');
     });
 
     it('should format result with no matches', () => {
@@ -124,6 +140,7 @@ describe('Formatters', () => {
 
       expect(output).toContain('STATUS: NOT_FOUND');
       expect(output).toContain('MESSAGE: Symbol not found');
+      expect(output).not.toContain('MATCH_');
     });
 
     it('should format error result', () => {
@@ -137,9 +154,10 @@ describe('Formatters', () => {
 
       expect(output).toContain('STATUS: ERROR');
       expect(output).toContain('ERROR: Code is empty');
+      expect(output).not.toContain('MATCH_');
     });
 
-    it('should format multi-line context properly', () => {
+    it('should format multi-line context with all lines', () => {
       const result: FinderResult = {
         success: true,
         matches: [
@@ -156,9 +174,11 @@ describe('Formatters', () => {
       expect(output).toContain('line1');
       expect(output).toContain('line2');
       expect(output).toContain('line3');
+      const line1Count = (output.match(/line1/g) || []).length;
+      expect(line1Count).toBeGreaterThanOrEqual(1);
     });
 
-    it('should format multiple matches', () => {
+    it('should format multiple matches with sequential numbering', () => {
       const result: FinderResult = {
         success: true,
         matches: [
@@ -177,8 +197,43 @@ describe('Formatters', () => {
 
       const output = formatter.format(result);
 
+      expect(output).toContain('MATCH_COUNT: 2');
       expect(output).toContain('MATCH_1:');
       expect(output).toContain('MATCH_2:');
+      
+      const match1Index = output.indexOf('MATCH_1:');
+      const match2Index = output.indexOf('MATCH_2:');
+      expect(match1Index).toBeLessThan(match2Index);
+      
+      expect(output).toContain('context1');
+      expect(output).toContain('context2');
+    });
+
+    it('should include exact position for each match', () => {
+      const result: FinderResult = {
+        success: true,
+        matches: [
+          {
+            symbol: 'alpha',
+            position: { line: 100, column: 50 },
+            context: 'test'
+          },
+          {
+            symbol: 'beta',
+            position: { line: 200, column: 75 },
+            context: 'test2'
+          }
+        ]
+      };
+
+      const output = formatter.format(result);
+
+      expect(output).toContain('LINE: 100');
+      expect(output).toContain('COLUMN: 50');
+      expect(output).toContain('SYMBOL: alpha');
+      expect(output).toContain('LINE: 200');
+      expect(output).toContain('COLUMN: 75');
+      expect(output).toContain('SYMBOL: beta');
     });
   });
 });
