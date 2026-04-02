@@ -77,22 +77,17 @@ export class SymbolFinder {
 
     const normalizedSymbolPositions = this.findAllPositions(normalizedCode, symbolPatternStr);
 
-    const fragmentPositions: number[] = [];
-    let searchFrom = 0;
-    while (searchFrom < normalizedCode.length) {
-      const idx = normalizedCode.indexOf(normalizedFragment, searchFrom);
-      if (idx === -1) break;
-      fragmentPositions.push(idx);
-      searchFrom = idx + 1;
-    }
-
     const matches: SymbolMatch[] = [];
 
-    for (const fragPos of fragmentPositions) {
-      const expectedSymbolPos = fragPos + symbolOffsetInFragment;
-      const symbolIdx = normalizedSymbolPositions.indexOf(expectedSymbolPos);
-      if (symbolIdx !== -1 && symbolIdx < originalOccurrences.length) {
-        const orig = originalOccurrences[symbolIdx]!;
+    for (let i = 0; i < normalizedSymbolPositions.length; i++) {
+      const symbolPos = normalizedSymbolPositions[i]!;
+      const candidateStart = symbolPos - symbolOffsetInFragment;
+
+      if (candidateStart < 0) continue;
+
+      if (normalizedCode.startsWith(normalizedFragment, candidateStart)
+          && i < originalOccurrences.length) {
+        const orig = originalOccurrences[i]!;
         matches.push({
           symbol: symbol,
           position: { line: orig.line, column: orig.column },
