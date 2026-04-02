@@ -45,31 +45,58 @@ export class SymbolFinder {
       };
     }
 
-    const lines = code.split('\n');
-    const matches: SymbolMatch[] = [];
-    const normalizedFragment = normalizeForComparison(fragment);
-    const fragmentLineCount = fragment.split('\n').length;
-    const symbolPattern = this.createSymbolPattern(symbol);
+    const lines = code.split(/\r?\n/);
+    const symbolPatternStr = `\\b${escapeRegExp(symbol)}\\b`;
 
+    const originalOccurrences: Position[] = [];
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-      const line = lines[lineIndex];
-      if (!line) continue;
-
-      const regex = new RegExp(symbolPattern.source, symbolPattern.flags);
+      const line = lines[lineIndex]!;
+      const regex = new RegExp(symbolPatternStr, 'g');
       let match: RegExpExecArray | null;
 
       while ((match = regex.exec(line)) !== null) {
-        const column = match.index + 1;
-        const position: Position = {
+        originalOccurrences.push({
           line: lineIndex + 1,
-          column: column
-        };
+          column: match.index + 1
+        });
+      }
+    }
 
-        if (this.fragmentMatchesContext(normalizedFragment, lines, lineIndex, fragmentLineCount)) {
+    const normalizedCode = normalizeForComparison(code);
+    const normalizedFragment = normalizeForComparison(fragment);
+
+    const symbolOffsetsInFragment = this.findSymbolOffsets(normalizedFragment, symbolPatternStr);
+    if (symbolOffsetsInFragment.length === 0) {
+      return {
+        success: false,
+        matches: [],
+        error: 'Symbol not found in fragment'
+      };
+    }
+
+    const normalizedSymbolPositions = this.findAllPositions(normalizedCode, symbolPatternStr);
+
+    const fragmentPositions: number[] = [];
+    let searchFrom = 0;
+    while (searchFrom < normalizedCode.length) {
+      const idx = normalizedCode.indexOf(normalizedFragment, searchFrom);
+      if (idx === -1) break;
+      fragmentPositions.push(idx);
+      searchFrom = idx + 1;
+    }
+
+    const matches: SymbolMatch[] = [];
+
+    for (const fragPos of fragmentPositions) {
+      for (const offset of symbolOffsetsInFragment) {
+        const expectedSymbolPos = fragPos + offset;
+        const symbolIdx = normalizedSymbolPositions.indexOf(expectedSymbolPos);
+        if (symbolIdx !== -1 && symbolIdx < originalOccurrences.length) {
+          const orig = originalOccurrences[symbolIdx]!;
           matches.push({
             symbol: symbol,
-            position: position,
-            context: this.extractContext(lines, lineIndex)
+            position: { line: orig.line, column: orig.column },
+            context: this.extractContext(lines, orig.line - 1)
           });
         }
       }
@@ -89,6 +116,30 @@ export class SymbolFinder {
     };
   }
 
+  private findSymbolOffsets(text: string, symbolPatternStr: string): number[] {
+    const offsets: number[] = [];
+    const regex = new RegExp(symbolPatternStr, 'g');
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(text)) !== null) {
+      offsets.push(match.index);
+    }
+
+    return offsets;
+  }
+
+  private findAllPositions(text: string, patternStr: string): number[] {
+    const positions: number[] = [];
+    const regex = new RegExp(patternStr, 'g');
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(text)) !== null) {
+      positions.push(match.index);
+    }
+
+    return positions;
+  }
+
   private isValidSymbol(symbol: string): boolean {
     const trimmed = symbol.trim();
     if (trimmed !== symbol) return false;
@@ -98,37 +149,6 @@ export class SymbolFinder {
   private symbolInFragment(symbol: string, fragment: string): boolean {
     const pattern = new RegExp(`\\b${escapeRegExp(symbol)}\\b`);
     return pattern.test(fragment);
-  }
-
-  private createSymbolPattern(symbol: string): RegExp {
-    const escapedSymbol = escapeRegExp(symbol);
-    return new RegExp(`\\b${escapedSymbol}\\b`, 'g');
-  }
-
-  private fragmentMatchesContext(
-    normalizedFragment: string,
-    lines: string[],
-    lineIndex: number,
-    fragmentLineCount: number
-  ): boolean {
-    const minStart = Math.max(0, lineIndex - fragmentLineCount + 1);
-    const maxStart = Math.min(lines.length - fragmentLineCount, lineIndex);
-
-    for (let start = minStart; start <= maxStart; start++) {
-      if (start + fragmentLineCount > lines.length) continue;
-
-      const contextLines: string[] = [];
-      for (let i = 0; i < fragmentLineCount; i++) {
-        contextLines.push(lines[start + i] || '');
-      }
-      const normalizedContext = normalizeForComparison(contextLines.join('\n'));
-
-      if (normalizedContext.includes(normalizedFragment)) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   private extractContext(lines: string[], lineIndex: number): string {
