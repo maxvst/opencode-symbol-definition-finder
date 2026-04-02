@@ -1,0 +1,107 @@
+#!/usr/bin/env node
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { SymbolFinder } from './symbolFinder';
+import { FormatterFactory } from './formatters/formatterFactory';
+import { OutputFormat } from './types';
+
+interface CLIOptions {
+  file: string;
+  symbol: string;
+  fragment: string;
+  format: OutputFormat;
+}
+
+function parseArgs(): CLIOptions {
+  const args = process.argv.slice(2);
+  const options: Partial<CLIOptions> = {};
+  
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    
+    if (arg === '--file' || arg === '-f') {
+      options.file = args[++i];
+    } else if (arg === '--symbol' || arg === '-s') {
+      options.symbol = args[++i];
+    } else if (arg === '--fragment' || arg === '-F') {
+      options.fragment = args[++i];
+    } else if (arg === '--format' || arg === '-m') {
+      options.format = args[++i] as OutputFormat;
+    } else if (arg === '--help' || arg === '-h') {
+      printHelp();
+      process.exit(0);
+    }
+  }
+  
+  if (!options.file || !options.symbol || !options.fragment) {
+    console.error('Error: Missing required arguments');
+    printHelp();
+    process.exit(1);
+  }
+  
+  if (!options.format) {
+    options.format = 'json';
+  }
+  
+  return options as CLIOptions;
+}
+
+function printHelp(): void {
+  console.log(`
+Symbol Finder - Find symbol positions in code
+
+Usage: symbol-finder [options]
+
+Options:
+  -f, --file <path>       Path to the code file (required)
+  -s, --symbol <name>     Symbol name to find (required)
+  -F, --fragment <code>   Code fragment where the symbol is used (required)
+  -m, --format <format>   Output format: json | llm (default: json)
+  -h, --help              Show this help message
+
+Examples:
+  symbol-finder -f src/app.ts -s myFunction -F "myFunction(arg1, arg2)"
+  symbol-finder --file code.py --symbol MyClass --fragment "MyClass()" --format llm
+`);
+}
+
+function validateFile(filePath: string): string {
+  if (!fs.existsSync(filePath)) {
+    console.error(`Error: File not found: ${filePath}`);
+    process.exit(1);
+  }
+  
+  const absolutePath = path.resolve(filePath);
+  return fs.readFileSync(absolutePath, 'utf-8');
+}
+
+function validateFormat(format: string): OutputFormat {
+  const availableFormats = FormatterFactory.getAvailableFormats();
+  if (!availableFormats.includes(format as OutputFormat)) {
+    console.error(`Error: Invalid format '${format}'. Available formats: ${availableFormats.join(', ')}`);
+    process.exit(1);
+  }
+  return format as OutputFormat;
+}
+
+function main(): void {
+  const options = parseArgs();
+  
+  const code = validateFile(options.file);
+  validateFormat(options.format);
+  
+  const finder = new SymbolFinder();
+  const result = finder.find({
+    code,
+    symbol: options.symbol,
+    fragment: options.fragment
+  });
+  
+  const formatter = FormatterFactory.getFormatter(options.format);
+  const output = formatter.format(result);
+  
+  console.log(output);
+}
+
+main();

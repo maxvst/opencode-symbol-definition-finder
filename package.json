@@ -1,0 +1,30 @@
+{
+  "name": "symbol-finder",
+  "version": "1.0.0",
+  "description": "Symbol finder algorithm for code navigation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "symbol-finder": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "start": "node dist/cli.js"
+  },
+  "keywords": ["symbol", "finder", "code-navigation", "lsp"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.5.0",
+    "@types/yargs": "^17.0.35",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2",
+    "yargs": "^18.0.0"
+  },
+  "dependencies": {}
+}
