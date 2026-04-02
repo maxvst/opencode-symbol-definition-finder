@@ -45,6 +45,14 @@ export class SymbolFinder {
       };
     }
 
+    if (this.countSymbolInFragment(symbol, fragment) !== 1) {
+      return {
+        success: false,
+        matches: [],
+        error: 'Symbol must appear exactly once in fragment'
+      };
+    }
+
     const lines = code.split(/\r?\n/);
     const symbolPatternStr = `\\b${escapeRegExp(symbol)}\\b`;
 
@@ -65,14 +73,7 @@ export class SymbolFinder {
     const normalizedCode = normalizeForComparison(code);
     const normalizedFragment = normalizeForComparison(fragment);
 
-    const symbolOffsetsInFragment = this.findSymbolOffsets(normalizedFragment, symbolPatternStr);
-    if (symbolOffsetsInFragment.length === 0) {
-      return {
-        success: false,
-        matches: [],
-        error: 'Symbol not found in fragment'
-      };
-    }
+    const symbolOffsetInFragment = this.findSymbolOffset(normalizedFragment, symbolPatternStr);
 
     const normalizedSymbolPositions = this.findAllPositions(normalizedCode, symbolPatternStr);
 
@@ -88,17 +89,15 @@ export class SymbolFinder {
     const matches: SymbolMatch[] = [];
 
     for (const fragPos of fragmentPositions) {
-      for (const offset of symbolOffsetsInFragment) {
-        const expectedSymbolPos = fragPos + offset;
-        const symbolIdx = normalizedSymbolPositions.indexOf(expectedSymbolPos);
-        if (symbolIdx !== -1 && symbolIdx < originalOccurrences.length) {
-          const orig = originalOccurrences[symbolIdx]!;
-          matches.push({
-            symbol: symbol,
-            position: { line: orig.line, column: orig.column },
-            context: this.extractContext(lines, orig.line - 1)
-          });
-        }
+      const expectedSymbolPos = fragPos + symbolOffsetInFragment;
+      const symbolIdx = normalizedSymbolPositions.indexOf(expectedSymbolPos);
+      if (symbolIdx !== -1 && symbolIdx < originalOccurrences.length) {
+        const orig = originalOccurrences[symbolIdx]!;
+        matches.push({
+          symbol: symbol,
+          position: { line: orig.line, column: orig.column },
+          context: this.extractContext(lines, orig.line - 1)
+        });
       }
     }
 
@@ -116,16 +115,10 @@ export class SymbolFinder {
     };
   }
 
-  private findSymbolOffsets(text: string, symbolPatternStr: string): number[] {
-    const offsets: number[] = [];
+  private findSymbolOffset(text: string, symbolPatternStr: string): number {
     const regex = new RegExp(symbolPatternStr, 'g');
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(text)) !== null) {
-      offsets.push(match.index);
-    }
-
-    return offsets;
+    const match = regex.exec(text);
+    return match !== null ? match.index : -1;
   }
 
   private findAllPositions(text: string, patternStr: string): number[] {
@@ -149,6 +142,12 @@ export class SymbolFinder {
   private symbolInFragment(symbol: string, fragment: string): boolean {
     const pattern = new RegExp(`\\b${escapeRegExp(symbol)}\\b`);
     return pattern.test(fragment);
+  }
+
+  private countSymbolInFragment(symbol: string, fragment: string): number {
+    const pattern = new RegExp(`\\b${escapeRegExp(symbol)}\\b`, 'g');
+    const matches = fragment.match(pattern);
+    return matches ? matches.length : 0;
   }
 
   private extractContext(lines: string[], lineIndex: number): string {
