@@ -37,7 +37,11 @@ export class SymbolFinder {
       };
     }
 
-    if (!this.symbolInFragment(symbol, fragment)) {
+    const symbolPattern = `\\b${escapeRegExp(symbol)}\\b`;
+    const symbolRegex = new RegExp(symbolPattern, 'g');
+    const symbolRegexNoGlobal = new RegExp(symbolPattern);
+
+    if (!symbolRegexNoGlobal.test(fragment)) {
       return {
         success: false,
         matches: [],
@@ -45,7 +49,8 @@ export class SymbolFinder {
       };
     }
 
-    if (this.countSymbolInFragment(symbol, fragment) !== 1) {
+    const fragmentMatches = fragment.match(symbolRegex);
+    if (!fragmentMatches || fragmentMatches.length !== 1) {
       return {
         success: false,
         matches: [],
@@ -54,15 +59,14 @@ export class SymbolFinder {
     }
 
     const lines = code.split(/\r?\n/);
-    const symbolPatternStr = `\\b${escapeRegExp(symbol)}\\b`;
-
     const originalOccurrences: Position[] = [];
+
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
       const line = lines[lineIndex]!;
-      const regex = new RegExp(symbolPatternStr, 'g');
+      symbolRegex.lastIndex = 0;
       let match: RegExpExecArray | null;
 
-      while ((match = regex.exec(line)) !== null) {
+      while ((match = symbolRegex.exec(line)) !== null) {
         originalOccurrences.push({
           line: lineIndex + 1,
           column: match.index + 1
@@ -73,9 +77,9 @@ export class SymbolFinder {
     const normalizedCode = normalizeForComparison(code);
     const normalizedFragment = normalizeForComparison(fragment);
 
-    const symbolOffsetInFragment = this.findSymbolOffset(normalizedFragment, symbolPatternStr);
+    const symbolOffsetInFragment = this.findSymbolOffset(normalizedFragment, symbolRegex);
 
-    const normalizedSymbolPositions = this.findAllPositions(normalizedCode, symbolPatternStr);
+    const normalizedSymbolPositions = this.findAllPositions(normalizedCode, symbolRegex);
 
     const matches: SymbolMatch[] = [];
 
@@ -110,15 +114,15 @@ export class SymbolFinder {
     };
   }
 
-  private findSymbolOffset(text: string, symbolPatternStr: string): number {
-    const regex = new RegExp(symbolPatternStr, 'g');
+  private findSymbolOffset(text: string, regex: RegExp): number {
+    regex.lastIndex = 0;
     const match = regex.exec(text);
     return match !== null ? match.index : -1;
   }
 
-  private findAllPositions(text: string, patternStr: string): number[] {
+  private findAllPositions(text: string, regex: RegExp): number[] {
     const positions: number[] = [];
-    const regex = new RegExp(patternStr, 'g');
+    regex.lastIndex = 0;
     let match: RegExpExecArray | null;
 
     while ((match = regex.exec(text)) !== null) {
@@ -132,17 +136,6 @@ export class SymbolFinder {
     const trimmed = symbol.trim();
     if (trimmed !== symbol) return false;
     return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimmed);
-  }
-
-  private symbolInFragment(symbol: string, fragment: string): boolean {
-    const pattern = new RegExp(`\\b${escapeRegExp(symbol)}\\b`);
-    return pattern.test(fragment);
-  }
-
-  private countSymbolInFragment(symbol: string, fragment: string): number {
-    const pattern = new RegExp(`\\b${escapeRegExp(symbol)}\\b`, 'g');
-    const matches = fragment.match(pattern);
-    return matches ? matches.length : 0;
   }
 
   private extractContext(lines: string[], lineIndex: number): string {
