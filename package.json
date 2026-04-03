@@ -16,6 +16,7 @@
   "scripts": {
     "build": "tsc && esbuild src/opencode-tool.ts --bundle --outfile=dist/symbol-finder.js --format=esm --platform=node --external:fs --external:path",
     "test": "jest",
+    "test:e2e": "jest --config jest.e2e.config.js",
     "test:watch": "jest --watch",
     "start": "node dist/cli.js"
   },
