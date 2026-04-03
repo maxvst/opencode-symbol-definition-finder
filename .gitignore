@@ -7,3 +7,4 @@ coverage/
 .idea/
 *.tsbuildinfo
 task_history/
+tests/e2e/fixtures/sample-project/.opencode/tools/
