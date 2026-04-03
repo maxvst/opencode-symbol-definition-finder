@@ -3,28 +3,24 @@ import { Formatter, FinderResult } from '../types';
 export class LLMFormatter implements Formatter {
   format(result: FinderResult): string {
     const lines: string[] = [];
-    
+
     if (!result.success) {
       lines.push('STATUS: ERROR');
-      if (result.error) {
-        lines.push(`ERROR: ${result.error}`);
-      }
+      lines.push(`ERROR_CODE: ${result.error.code}`);
+      lines.push(`ERROR: ${result.error.message}`);
       return lines.join('\n');
     }
-    
+
     if (result.matches.length === 0) {
       lines.push('STATUS: NOT_FOUND');
-      if (result.error) {
-        lines.push(`MESSAGE: ${result.error}`);
-      }
       return lines.join('\n');
     }
-    
+
     lines.push('STATUS: FOUND');
     lines.push(`MATCH_COUNT: ${result.matches.length}`);
     lines.push('');
     lines.push('MATCHES:');
-    
+
     result.matches.forEach((match, index) => {
       lines.push(`  - MATCH_${index + 1}:`);
       lines.push(`      SYMBOL: ${match.symbol}`);
@@ -36,7 +32,7 @@ export class LLMFormatter implements Formatter {
       });
       lines.push('');
     });
-    
+
     return lines.join('\n');
   }
 }

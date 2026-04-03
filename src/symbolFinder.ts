@@ -1,7 +1,21 @@
-import { FinderOptions, FinderResult, SymbolMatch, Position } from './types';
+import {
+  FinderOptions,
+  FinderResult,
+  SymbolMatch,
+  FinderErrorCode,
+  SymbolFinderOptions,
+} from './types';
 import { normalizeForComparison, escapeRegExp } from './utils/textNormalizer';
 
+const DEFAULT_CONTEXT_LINES = 3;
+
 export class SymbolFinder {
+  private readonly contextLines: number;
+
+  constructor(options: SymbolFinderOptions = {}) {
+    this.contextLines = options.contextLines ?? DEFAULT_CONTEXT_LINES;
+  }
+
   find(options: FinderOptions): FinderResult {
     const { code, symbol, fragment } = options;
 
@@ -9,7 +23,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: 'Code is empty'
+        error: { code: FinderErrorCode.EMPTY_CODE, message: 'Code is empty' },
       };
     }
 
@@ -17,7 +31,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: 'Symbol is empty'
+        error: { code: FinderErrorCode.EMPTY_SYMBOL, message: 'Symbol is empty' },
       };
     }
 
@@ -25,7 +39,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: 'Fragment is empty'
+        error: { code: FinderErrorCode.EMPTY_FRAGMENT, message: 'Fragment is empty' },
       };
     }
 
@@ -33,7 +47,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: 'Symbol contains invalid characters'
+        error: { code: FinderErrorCode.INVALID_SYMBOL, message: 'Symbol contains invalid characters' },
       };
     }
 
@@ -45,7 +59,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: 'Symbol not found in fragment'
+        error: { code: FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT, message: 'Symbol not found in fragment' },
       };
     }
 
@@ -54,12 +68,12 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: 'Symbol must appear exactly once in fragment'
+        error: { code: FinderErrorCode.SYMBOL_NOT_UNIQUE_IN_FRAGMENT, message: 'Symbol must appear exactly once in fragment' },
       };
     }
 
     const lines = code.split(/\r?\n/);
-    const originalOccurrences: Position[] = [];
+    const originalOccurrences: { readonly line: number; readonly column: number }[] = [];
 
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
       const line = lines[lineIndex]!;
@@ -69,7 +83,7 @@ export class SymbolFinder {
       while ((match = symbolRegex.exec(line)) !== null) {
         originalOccurrences.push({
           line: lineIndex + 1,
-          column: match.index + 1
+          column: match.index + 1,
         });
       }
     }
@@ -89,13 +103,15 @@ export class SymbolFinder {
 
       if (candidateStart < 0) continue;
 
-      if (normalizedCode.startsWith(normalizedFragment, candidateStart)
-          && i < originalOccurrences.length) {
+      if (
+        normalizedCode.startsWith(normalizedFragment, candidateStart) &&
+        i < originalOccurrences.length
+      ) {
         const orig = originalOccurrences[i]!;
         matches.push({
           symbol: symbol,
           position: { line: orig.line, column: orig.column },
-          context: this.extractContext(lines, orig.line - 1)
+          context: this.extractContext(lines, orig.line - 1),
         });
       }
     }
@@ -104,13 +120,12 @@ export class SymbolFinder {
       return {
         success: true,
         matches: [],
-        error: 'No matches found for the given symbol and fragment'
       };
     }
 
     return {
       success: true,
-      matches: this.deduplicateMatches(matches)
+      matches: this.deduplicateMatches(matches),
     };
   }
 
@@ -139,9 +154,8 @@ export class SymbolFinder {
   }
 
   private extractContext(lines: string[], lineIndex: number): string {
-    const contextLines: number = 3;
-    const startLine = Math.max(0, lineIndex - contextLines);
-    const endLine = Math.min(lines.length - 1, lineIndex + contextLines);
+    const startLine = Math.max(0, lineIndex - this.contextLines);
+    const endLine = Math.min(lines.length - 1, lineIndex + this.contextLines);
 
     const contextParts: string[] = [];
 
@@ -169,4 +183,9 @@ export class SymbolFinder {
 
     return unique;
   }
+}
+
+export function find(options: FinderOptions): FinderResult {
+  const finder = new SymbolFinder();
+  return finder.find(options);
 }

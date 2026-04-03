@@ -4,6 +4,12 @@
   "description": "Symbol finder algorithm for code navigation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "bin": {
     "symbol-finder": "./dist/cli.js"
   },

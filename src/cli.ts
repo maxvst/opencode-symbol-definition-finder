@@ -4,22 +4,21 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { SymbolFinder } from './symbolFinder';
 import { FormatterFactory } from './formatters/formatterFactory';
-import { OutputFormat } from './types';
 
 interface CLIOptions {
   file: string;
   symbol: string;
   fragment: string;
-  format: OutputFormat;
+  format: string;
 }
 
 function parseArgs(): CLIOptions {
   const args = process.argv.slice(2);
   const options: Partial<CLIOptions> = {};
-  
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
+
     if (arg === '--file' || arg === '-f') {
       options.file = args[++i];
     } else if (arg === '--symbol' || arg === '-s') {
@@ -27,23 +26,23 @@ function parseArgs(): CLIOptions {
     } else if (arg === '--fragment' || arg === '-F') {
       options.fragment = args[++i];
     } else if (arg === '--format' || arg === '-m') {
-      options.format = args[++i] as OutputFormat;
+      options.format = args[++i];
     } else if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
     }
   }
-  
+
   if (!options.file || !options.symbol || !options.fragment) {
     console.error('Error: Missing required arguments');
     printHelp();
     process.exit(1);
   }
-  
+
   if (!options.format) {
     options.format = 'json';
   }
-  
+
   return options as CLIOptions;
 }
 
@@ -71,36 +70,37 @@ function validateFile(filePath: string): string {
     console.error(`Error: File not found: ${filePath}`);
     process.exit(1);
   }
-  
+
   const absolutePath = path.resolve(filePath);
   return fs.readFileSync(absolutePath, 'utf-8');
 }
 
-function validateFormat(format: string): OutputFormat {
-  const availableFormats = FormatterFactory.getAvailableFormats();
-  if (!availableFormats.includes(format as OutputFormat)) {
+function validateFormat(format: string, factory: FormatterFactory): string {
+  const availableFormats = factory.getAvailableFormats();
+  if (!availableFormats.includes(format)) {
     console.error(`Error: Invalid format '${format}'. Available formats: ${availableFormats.join(', ')}`);
     process.exit(1);
   }
-  return format as OutputFormat;
+  return format;
 }
 
 function main(): void {
   const options = parseArgs();
-  
+  const factory = new FormatterFactory();
+
   const code = validateFile(options.file);
-  validateFormat(options.format);
-  
+  validateFormat(options.format, factory);
+
   const finder = new SymbolFinder();
   const result = finder.find({
     code,
     symbol: options.symbol,
-    fragment: options.fragment
+    fragment: options.fragment,
   });
-  
-  const formatter = FormatterFactory.getFormatter(options.format);
+
+  const formatter = factory.getFormatter(options.format);
   const output = formatter.format(result);
-  
+
   console.log(output);
 }
 

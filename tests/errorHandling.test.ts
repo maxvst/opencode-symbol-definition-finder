@@ -1,4 +1,5 @@
 import { SymbolFinder } from '../src/symbolFinder';
+import { FinderErrorCode } from '../src/types';
 
 describe('SymbolFinder', () => {
   let finder: SymbolFinder;
@@ -16,7 +17,10 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Code is empty');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.EMPTY_CODE);
+        expect(result.error.message).toBe('Code is empty');
+      }
       expect(result.matches).toHaveLength(0);
     });
 
@@ -28,7 +32,10 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Symbol is empty');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.EMPTY_SYMBOL);
+        expect(result.error.message).toBe('Symbol is empty');
+      }
       expect(result.matches).toHaveLength(0);
     });
 
@@ -40,7 +47,10 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Fragment is empty');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.EMPTY_FRAGMENT);
+        expect(result.error.message).toBe('Fragment is empty');
+      }
       expect(result.matches).toHaveLength(0);
     });
 
@@ -53,7 +63,6 @@ describe('SymbolFinder', () => {
 
       expect(result.success).toBe(true);
       expect(result.matches).toHaveLength(0);
-      expect(result.error).toBe('No matches found for the given symbol and fragment');
     });
   });
 
@@ -66,7 +75,9 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Symbol not found in fragment');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
+      }
       expect(result.matches).toHaveLength(0);
     });
 
@@ -86,7 +97,9 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Symbol not found in fragment');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
+      }
       expect(result.matches).toHaveLength(0);
     });
 
@@ -98,7 +111,9 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Symbol not found in fragment');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
+      }
       expect(result.matches).toHaveLength(0);
     });
   });
@@ -112,7 +127,9 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Symbol contains invalid characters');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.INVALID_SYMBOL);
+      }
       expect(result.matches).toHaveLength(0);
     });
 
@@ -124,7 +141,9 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Symbol contains invalid characters');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.INVALID_SYMBOL);
+      }
       expect(result.matches).toHaveLength(0);
     });
 
@@ -136,7 +155,9 @@ describe('SymbolFinder', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Symbol contains invalid characters');
+      if (!result.success) {
+        expect(result.error.code).toBe(FinderErrorCode.INVALID_SYMBOL);
+      }
       expect(result.matches).toHaveLength(0);
     });
   });

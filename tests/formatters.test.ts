@@ -1,6 +1,6 @@
 import { JsonFormatter } from '../src/formatters/jsonFormatter';
 import { LLMFormatter } from '../src/formatters/llmFormatter';
-import { FinderResult } from '../src/types';
+import { FinderResult, FinderErrorCode } from '../src/types';
 
 describe('Formatters', () => {
   describe('JsonFormatter', () => {
@@ -38,7 +38,6 @@ describe('Formatters', () => {
       const result: FinderResult = {
         success: true,
         matches: [],
-        error: 'No matches found'
       };
 
       const output = formatter.format(result);
@@ -47,14 +46,14 @@ describe('Formatters', () => {
       expect(parsed.success).toBe(true);
       expect(parsed.matches).toHaveLength(0);
       expect(parsed.matches).toEqual([]);
-      expect(parsed.error).toBe('No matches found');
+      expect(parsed.error).toBeUndefined();
     });
 
-    it('should format error result', () => {
+    it('should format error result with code and message', () => {
       const result: FinderResult = {
         success: false,
         matches: [],
-        error: 'Invalid input'
+        error: { code: FinderErrorCode.EMPTY_CODE, message: 'Code is empty' }
       };
 
       const output = formatter.format(result);
@@ -62,7 +61,8 @@ describe('Formatters', () => {
 
       expect(parsed.success).toBe(false);
       expect(parsed.matches).toHaveLength(0);
-      expect(parsed.error).toBe('Invalid input');
+      expect(parsed.error.code).toBe('EMPTY_CODE');
+      expect(parsed.error.message).toBe('Code is empty');
     });
 
     it('should format multiple matches with exact data', () => {
@@ -133,26 +133,25 @@ describe('Formatters', () => {
       const result: FinderResult = {
         success: true,
         matches: [],
-        error: 'Symbol not found'
       };
 
       const output = formatter.format(result);
 
       expect(output).toContain('STATUS: NOT_FOUND');
-      expect(output).toContain('MESSAGE: Symbol not found');
       expect(output).not.toContain('MATCH_');
     });
 
-    it('should format error result', () => {
+    it('should format error result with code and message', () => {
       const result: FinderResult = {
         success: false,
         matches: [],
-        error: 'Code is empty'
+        error: { code: FinderErrorCode.EMPTY_CODE, message: 'Code is empty' }
       };
 
       const output = formatter.format(result);
 
       expect(output).toContain('STATUS: ERROR');
+      expect(output).toContain('ERROR_CODE: EMPTY_CODE');
       expect(output).toContain('ERROR: Code is empty');
       expect(output).not.toContain('MATCH_');
     });
@@ -200,11 +199,11 @@ describe('Formatters', () => {
       expect(output).toContain('MATCH_COUNT: 2');
       expect(output).toContain('MATCH_1:');
       expect(output).toContain('MATCH_2:');
-      
+
       const match1Index = output.indexOf('MATCH_1:');
       const match2Index = output.indexOf('MATCH_2:');
       expect(match1Index).toBeLessThan(match2Index);
-      
+
       expect(output).toContain('context1');
       expect(output).toContain('context2');
     });
