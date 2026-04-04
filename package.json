@@ -14,7 +14,7 @@
     "symbol-finder": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && esbuild src/opencode-tool.ts --bundle --outfile=dist/symbol-finder.js --format=esm --platform=node --external:fs --external:path",
+    "build": "tsc && esbuild src/opencode-tool.ts --bundle --outfile=dist/symbol-finder.js --format=esm --platform=node --external:fs --external:path && rm -rf dist/skills && cp -r src/skills dist/skills",
     "test": "jest",
     "test:e2e": "npm run build && jest --config jest.e2e.config.js",
     "test:watch": "jest --watch",
