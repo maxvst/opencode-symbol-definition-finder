@@ -13,6 +13,7 @@ export class LLMFormatter implements Formatter {
 
     if (result.matches.length === 0) {
       lines.push('STATUS: NOT_FOUND');
+      lines.push('HINT: The symbol was not found at any location matching the fragment in the file. Verify the symbol name and fragment are correct and that the file contains the expected code. If the file does not contain the expected code, use other tools such as "read file" or "search in files" to locate the symbol.');
       return lines.join('\n');
     }
 

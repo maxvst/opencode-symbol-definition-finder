@@ -23,7 +23,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: { code: FinderErrorCode.EMPTY_CODE, message: 'Code is empty' },
+        error: { code: FinderErrorCode.EMPTY_CODE, message: 'Code is empty. Provide the correct file path in the "file" parameter that points to a file containing source code.' },
       };
     }
 
@@ -31,7 +31,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: { code: FinderErrorCode.EMPTY_SYMBOL, message: 'Symbol is empty' },
+        error: { code: FinderErrorCode.EMPTY_SYMBOL, message: 'Symbol is empty. Provide a valid symbol name (function, variable, or class name) in the "symbol" parameter.' },
       };
     }
 
@@ -39,7 +39,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: { code: FinderErrorCode.EMPTY_FRAGMENT, message: 'Fragment is empty' },
+        error: { code: FinderErrorCode.EMPTY_FRAGMENT, message: 'Fragment is empty. Provide a code snippet containing the symbol in the "fragment" parameter to disambiguate between multiple occurrences.' },
       };
     }
 
@@ -47,7 +47,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: { code: FinderErrorCode.INVALID_SYMBOL, message: 'Symbol contains invalid characters' },
+        error: { code: FinderErrorCode.INVALID_SYMBOL, message: 'Symbol contains invalid characters. Use only a valid identifier (letters, digits, _, $) without spaces or special characters. Pass only the symbol name, e.g. "myFunction", not a call expression like "myFunction()".' },
       };
     }
 
@@ -59,7 +59,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: { code: FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT, message: 'Symbol not found in fragment' },
+        error: { code: FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT, message: 'Symbol not found in fragment. Ensure the "fragment" parameter contains the exact symbol name specified in the "symbol" parameter.' },
       };
     }
 
@@ -68,7 +68,7 @@ export class SymbolFinder {
       return {
         success: false,
         matches: [],
-        error: { code: FinderErrorCode.SYMBOL_NOT_UNIQUE_IN_FRAGMENT, message: 'Symbol must appear exactly once in fragment' },
+        error: { code: FinderErrorCode.SYMBOL_NOT_UNIQUE_IN_FRAGMENT, message: 'Symbol appears multiple times in the fragment. Provide a larger fragment where the symbol occurs exactly once so the correct occurrence can be uniquely identified.' },
       };
     }
 

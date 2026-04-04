@@ -32,7 +32,7 @@ const definition = {
     const filePath = path.resolve(baseDir, args.file);
 
     if (!fs.existsSync(filePath)) {
-      return `Error: File not found: ${filePath}`;
+      return `Error: File not found: ${filePath}. Verify the file path is correct relative to the project directory. Use tools like "list directory" or "search files" to locate the file.`;
     }
 
     const code = fs.readFileSync(filePath, "utf-8");
