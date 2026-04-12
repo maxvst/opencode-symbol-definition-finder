@@ -19,7 +19,6 @@ describe('SymbolFinder', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.code).toBe(FinderErrorCode.EMPTY_CODE);
-        expect(result.error.message).toBe('Code is empty. Provide the correct file path in the "file" parameter that points to a file containing source code.');
       }
       expect(result.matches).toHaveLength(0);
     });
@@ -34,7 +33,6 @@ describe('SymbolFinder', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.code).toBe(FinderErrorCode.EMPTY_SYMBOL);
-        expect(result.error.message).toBe('Symbol is empty. Provide a valid symbol name (function, variable, or class name) in the "symbol" parameter.');
       }
       expect(result.matches).toHaveLength(0);
     });
@@ -49,7 +47,6 @@ describe('SymbolFinder', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.code).toBe(FinderErrorCode.EMPTY_FRAGMENT);
-        expect(result.error.message).toBe('Fragment is empty. Provide a code snippet containing the symbol in the "fragment" parameter to disambiguate between multiple occurrences.');
       }
       expect(result.matches).toHaveLength(0);
     });

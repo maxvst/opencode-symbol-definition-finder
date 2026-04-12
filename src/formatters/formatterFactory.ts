@@ -2,7 +2,7 @@ import { Formatter, OutputFormat } from '../types';
 import { JsonFormatter } from './jsonFormatter';
 import { LLMFormatter } from './llmFormatter';
 
-const DEFAULT_FORMATTERS: ReadonlyMap<string, () => Formatter> = new Map([
+const DEFAULT_FORMATTERS: ReadonlyMap<string, () => Formatter> = new Map<string, () => Formatter>([
   ['json', () => new JsonFormatter()],
   ['llm', () => new LLMFormatter()],
 ]);

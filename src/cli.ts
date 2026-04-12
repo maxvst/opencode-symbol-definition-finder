@@ -65,7 +65,7 @@ Examples:
 `);
 }
 
-function validateFile(filePath: string): string {
+function resolveAndReadFile(filePath: string): string {
   if (!fs.existsSync(filePath)) {
     console.error(`Error: File not found: ${filePath}`);
     process.exit(1);
@@ -88,7 +88,7 @@ function main(): void {
   const options = parseArgs();
   const factory = new FormatterFactory();
 
-  const code = validateFile(options.file);
+  const code = resolveAndReadFile(options.file);
   validateFormat(options.format, factory);
 
   const finder = new SymbolFinder();

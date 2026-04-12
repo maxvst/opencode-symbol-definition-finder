@@ -1,6 +1,6 @@
 ---
 name: go-to-definition
-description: Find the definition of a symbol (function, class, variable, type) using the symbol-finder tool to locate its exact position and then the lsp tool with goToDefinition operation to resolve the definition. Do NOT use grep, glob, read, or bash to search for definitions — use only symbol-finder and lsp tools.
+description: Find the definition of a symbol (function, class, variable, type and other) using the symbol-finder tool to locate its exact position and then the lsp tool with goToDefinition operation to resolve the definition. Do NOT use grep, glob, read, or bash to search for definitions — use only symbol-finder and lsp tools.
 ---
 
 # Go To Definition

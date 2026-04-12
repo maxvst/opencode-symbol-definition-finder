@@ -771,10 +771,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path2) {
-  if (!path2)
+function getElementAtPath(obj, path3) {
+  if (!path3)
     return obj;
-  return path2.reduce((acc, key) => acc?.[key], obj);
+  return path3.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -1157,11 +1157,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path2, issues) {
+function prefixIssues(path3, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path2);
+    iss.path.unshift(path3);
     return iss;
   });
 }
@@ -1344,7 +1344,7 @@ function formatError(error48, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error48, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error49, path2 = []) => {
+  const processError = (error49, path3 = []) => {
     var _a2, _b;
     for (const issue2 of error49.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
@@ -1354,7 +1354,7 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
       } else if (issue2.code === "invalid_element") {
         processError({ issues: issue2.issues }, issue2.path);
       } else {
-        const fullpath = [...path2, ...issue2.path];
+        const fullpath = [...path3, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -1386,8 +1386,8 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path2 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path2) {
+  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path3) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -13364,13 +13364,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path2 = ref.slice(1).split("/").filter(Boolean);
-  if (path2.length === 0) {
+  const path3 = ref.slice(1).split("/").filter(Boolean);
+  if (path3.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path2[0] === defsKey) {
-    const key = path2[1];
+  if (path3[0] === defsKey) {
+    const key = path3[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -13773,8 +13773,68 @@ function date4(params) {
 config(en_default());
 
 // src/opencode-tool.ts
-import * as fs from "fs";
-import * as path from "path";
+import * as path2 from "path";
+
+// src/validation/ValidationChain.ts
+var ValidationChain = class {
+  constructor(validators) {
+    this.validators = validators;
+  }
+  validate(options) {
+    for (const validator of this.validators) {
+      const error48 = validator.validate(options);
+      if (error48 !== null) {
+        return error48;
+      }
+    }
+    return null;
+  }
+};
+
+// src/validation/EmptyCodeValidator.ts
+var EmptyCodeValidator = class {
+  validate(options) {
+    if (!options.code || options.code.trim().length === 0) {
+      return { code: "EMPTY_CODE" /* EMPTY_CODE */ };
+    }
+    return null;
+  }
+};
+
+// src/validation/EmptySymbolValidator.ts
+var EmptySymbolValidator = class {
+  validate(options) {
+    if (!options.symbol || options.symbol.trim().length === 0) {
+      return { code: "EMPTY_SYMBOL" /* EMPTY_SYMBOL */ };
+    }
+    return null;
+  }
+};
+
+// src/validation/EmptyFragmentValidator.ts
+var EmptyFragmentValidator = class {
+  validate(options) {
+    if (!options.fragment || options.fragment.trim().length === 0) {
+      return { code: "EMPTY_FRAGMENT" /* EMPTY_FRAGMENT */ };
+    }
+    return null;
+  }
+};
+
+// src/validation/InvalidSymbolValidator.ts
+var InvalidSymbolValidator = class {
+  validate(options) {
+    const symbol2 = options.symbol;
+    const trimmed = symbol2.trim();
+    if (trimmed !== symbol2) {
+      return { code: "INVALID_SYMBOL" /* INVALID_SYMBOL */ };
+    }
+    if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimmed)) {
+      return { code: "INVALID_SYMBOL" /* INVALID_SYMBOL */ };
+    }
+    return null;
+  }
+};
 
 // src/utils/textNormalizer.ts
 function escapeRegExp(str) {
@@ -13784,60 +13844,28 @@ function normalizeForComparison(text) {
   return text.replace(/\s+/g, " ").replace(/\s*,\s*/g, ", ").replace(/\s*\(\s*/g, "(").replace(/\s*\)\s*/g, ")").replace(/\s*\{\s*/g, "{").replace(/\s*\}\s*/g, "}").replace(/\s*=\s*/g, "=").replace(/\s*:\s*/g, ":").replace(/\s*;\s*/g, ";").trim();
 }
 
-// src/symbolFinder.ts
-var DEFAULT_CONTEXT_LINES = 3;
-var SymbolFinder = class {
-  constructor(options = {}) {
-    this.contextLines = options.contextLines ?? DEFAULT_CONTEXT_LINES;
+// src/validation/SymbolInFragmentValidator.ts
+var SymbolInFragmentValidator = class {
+  validate(options) {
+    const symbolPattern = `\\b${escapeRegExp(options.symbol)}\\b`;
+    const symbolRegex = new RegExp(symbolPattern);
+    if (!symbolRegex.test(options.fragment)) {
+      return { code: "SYMBOL_NOT_IN_FRAGMENT" /* SYMBOL_NOT_IN_FRAGMENT */ };
+    }
+    const globalRegex = new RegExp(symbolPattern, "g");
+    const fragmentMatches = options.fragment.match(globalRegex);
+    if (!fragmentMatches || fragmentMatches.length !== 1) {
+      return { code: "SYMBOL_NOT_UNIQUE_IN_FRAGMENT" /* SYMBOL_NOT_UNIQUE_IN_FRAGMENT */ };
+    }
+    return null;
   }
-  find(options) {
-    const { code, symbol: symbol2, fragment } = options;
-    if (!code || code.trim().length === 0) {
-      return {
-        success: false,
-        matches: [],
-        error: { code: "EMPTY_CODE" /* EMPTY_CODE */, message: "Code is empty" }
-      };
-    }
-    if (!symbol2 || symbol2.trim().length === 0) {
-      return {
-        success: false,
-        matches: [],
-        error: { code: "EMPTY_SYMBOL" /* EMPTY_SYMBOL */, message: "Symbol is empty" }
-      };
-    }
-    if (!fragment || fragment.trim().length === 0) {
-      return {
-        success: false,
-        matches: [],
-        error: { code: "EMPTY_FRAGMENT" /* EMPTY_FRAGMENT */, message: "Fragment is empty" }
-      };
-    }
-    if (!this.isValidSymbol(symbol2)) {
-      return {
-        success: false,
-        matches: [],
-        error: { code: "INVALID_SYMBOL" /* INVALID_SYMBOL */, message: "Symbol contains invalid characters" }
-      };
-    }
+};
+
+// src/search/RegexSearchStrategy.ts
+var RegexSearchStrategy = class {
+  search(code, symbol2, fragment, contextLines) {
     const symbolPattern = `\\b${escapeRegExp(symbol2)}\\b`;
     const symbolRegex = new RegExp(symbolPattern, "g");
-    const symbolRegexNoGlobal = new RegExp(symbolPattern);
-    if (!symbolRegexNoGlobal.test(fragment)) {
-      return {
-        success: false,
-        matches: [],
-        error: { code: "SYMBOL_NOT_IN_FRAGMENT" /* SYMBOL_NOT_IN_FRAGMENT */, message: "Symbol not found in fragment" }
-      };
-    }
-    const fragmentMatches = fragment.match(symbolRegex);
-    if (!fragmentMatches || fragmentMatches.length !== 1) {
-      return {
-        success: false,
-        matches: [],
-        error: { code: "SYMBOL_NOT_UNIQUE_IN_FRAGMENT" /* SYMBOL_NOT_UNIQUE_IN_FRAGMENT */, message: "Symbol must appear exactly once in fragment" }
-      };
-    }
     const lines = code.split(/\r?\n/);
     const originalOccurrences = [];
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -13865,20 +13893,11 @@ var SymbolFinder = class {
         matches.push({
           symbol: symbol2,
           position: { line: orig.line, column: orig.column },
-          context: this.extractContext(lines, orig.line - 1)
+          context: this.extractContext(lines, orig.line - 1, contextLines)
         });
       }
     }
-    if (matches.length === 0) {
-      return {
-        success: true,
-        matches: []
-      };
-    }
-    return {
-      success: true,
-      matches: this.deduplicateMatches(matches)
-    };
+    return this.deduplicateMatches(matches);
   }
   findSymbolOffset(text, regex) {
     regex.lastIndex = 0;
@@ -13894,14 +13913,9 @@ var SymbolFinder = class {
     }
     return positions;
   }
-  isValidSymbol(symbol2) {
-    const trimmed = symbol2.trim();
-    if (trimmed !== symbol2) return false;
-    return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimmed);
-  }
-  extractContext(lines, lineIndex) {
-    const startLine = Math.max(0, lineIndex - this.contextLines);
-    const endLine = Math.min(lines.length - 1, lineIndex + this.contextLines);
+  extractContext(lines, lineIndex, contextLines) {
+    const startLine = Math.max(0, lineIndex - contextLines);
+    const endLine = Math.min(lines.length - 1, lineIndex + contextLines);
     const contextParts = [];
     for (let i = startLine; i <= endLine; i++) {
       const line = lines[i];
@@ -13925,6 +13939,52 @@ var SymbolFinder = class {
   }
 };
 
+// src/symbolFinder.ts
+var DEFAULT_CONTEXT_LINES = 3;
+function createDefaultValidators() {
+  return new ValidationChain([
+    new EmptyCodeValidator(),
+    new EmptySymbolValidator(),
+    new EmptyFragmentValidator(),
+    new InvalidSymbolValidator(),
+    new SymbolInFragmentValidator()
+  ]);
+}
+var SymbolFinder = class {
+  constructor(options = {}) {
+    const { contextLines, validator, searchStrategy } = options;
+    this.contextLines = contextLines ?? DEFAULT_CONTEXT_LINES;
+    this.validator = validator ?? createDefaultValidators();
+    this.searchStrategy = searchStrategy ?? new RegexSearchStrategy();
+  }
+  find(options) {
+    const error48 = this.validator.validate(options);
+    if (error48 !== null) {
+      return { success: false, matches: [], error: error48 };
+    }
+    const matches = this.searchStrategy.search(
+      options.code,
+      options.symbol,
+      options.fragment,
+      this.contextLines
+    );
+    return { success: true, matches };
+  }
+};
+
+// src/nodeFileReader.ts
+import * as fs from "fs";
+import * as path from "path";
+var NodeFileReader = class {
+  exists(filePath) {
+    return fs.existsSync(filePath);
+  }
+  read(filePath) {
+    const absolutePath = path.resolve(filePath);
+    return fs.readFileSync(absolutePath, "utf-8");
+  }
+};
+
 // src/formatters/llmFormatter.ts
 var LLMFormatter = class {
   format(result) {
@@ -13932,11 +13992,12 @@ var LLMFormatter = class {
     if (!result.success) {
       lines.push("STATUS: ERROR");
       lines.push(`ERROR_CODE: ${result.error.code}`);
-      lines.push(`ERROR: ${result.error.message}`);
+      lines.push(`ERROR: ${this.formatErrorMessage(result.error)}`);
       return lines.join("\n");
     }
     if (result.matches.length === 0) {
       lines.push("STATUS: NOT_FOUND");
+      lines.push('HINT: The symbol was not found at any location matching the fragment in the file. Verify the symbol name and fragment are correct and that the file contains the expected code. If the file does not contain the expected code, use other tools such as "read file" or "search in files" to locate the symbol.');
       return lines.join("\n");
     }
     lines.push("STATUS: FOUND");
@@ -13956,40 +14017,83 @@ var LLMFormatter = class {
     });
     return lines.join("\n");
   }
+  formatErrorMessage(error48) {
+    switch (error48.code) {
+      case "FILE_NOT_FOUND" /* FILE_NOT_FOUND */:
+        return `File not found: ${error48.details?.["file"] ?? "unknown"}. Verify the file path is correct relative to the project directory. Use tools like "list directory" or "search files" to locate the file.`;
+      case "EMPTY_CODE" /* EMPTY_CODE */:
+        return 'Code is empty. Provide the correct file path in the "file" parameter that points to a file containing source code.';
+      case "EMPTY_SYMBOL" /* EMPTY_SYMBOL */:
+        return 'Symbol is empty. Provide a valid symbol name (function, variable, or class name) in the "symbol" parameter.';
+      case "EMPTY_FRAGMENT" /* EMPTY_FRAGMENT */:
+        return 'Fragment is empty. Provide a code snippet containing the symbol in the "fragment" parameter to disambiguate between multiple occurrences.';
+      case "INVALID_SYMBOL" /* INVALID_SYMBOL */:
+        return 'Symbol contains invalid characters. Use only a valid identifier (letters, digits, _, $) without spaces or special characters. Pass only the symbol name, e.g. "myFunction", not a call expression like "myFunction()".';
+      case "SYMBOL_NOT_IN_FRAGMENT" /* SYMBOL_NOT_IN_FRAGMENT */:
+        return 'Symbol not found in fragment. Ensure the "fragment" parameter contains the exact symbol name specified in the "symbol" parameter.';
+      case "SYMBOL_NOT_UNIQUE_IN_FRAGMENT" /* SYMBOL_NOT_UNIQUE_IN_FRAGMENT */:
+        return "Symbol appears multiple times in the fragment. Provide a larger fragment where the symbol occurs exactly once so the correct occurrence can be uniquely identified.";
+      case "NO_MATCHES" /* NO_MATCHES */:
+        return "No matches found.";
+    }
+  }
 };
 
 // src/opencode-tool.ts
-var definition = {
-  description: "Finds occurrences of a symbol in a source code file. Given a file path, a symbol name, and a code fragment containing the symbol, locates all matching positions in the file and returns structured information about each match.",
-  args: {
-    file: external_exports.string().describe(
-      "Path to the source code file relative to the project directory"
-    ),
-    symbol: external_exports.string().describe(
-      "Symbol name to search for (e.g. function, variable, or class name)"
-    ),
-    fragment: external_exports.string().describe(
-      "Code fragment containing the symbol, used to disambiguate between multiple occurrences"
-    )
-  },
-  async execute(args, context) {
-    const baseDir = context.directory ?? process.cwd();
-    const filePath = path.resolve(baseDir, args.file);
-    if (!fs.existsSync(filePath)) {
-      return `Error: File not found: ${filePath}`;
+function createDefaultDeps() {
+  return {
+    fileReader: new NodeFileReader(),
+    createFinder: () => new SymbolFinder(),
+    createFormatter: () => new LLMFormatter()
+  };
+}
+function createDefinition(deps) {
+  const { fileReader, createFinder, createFormatter } = {
+    ...createDefaultDeps(),
+    ...deps
+  };
+  return {
+    description: "Finds occurrences of a symbol in a source code file. Given a file path, a symbol name, and a code fragment containing the symbol, locates all matching positions in the file and returns structured information about each match.",
+    args: {
+      file: external_exports.string().describe(
+        "Path to the source code file relative to the project directory"
+      ),
+      symbol: external_exports.string().describe(
+        "Symbol name to search for (e.g. function, variable, or class name)"
+      ),
+      fragment: external_exports.string().describe(
+        "Code fragment containing the symbol, used to disambiguate between multiple occurrences"
+      )
+    },
+    async execute(args, context) {
+      const baseDir = context.directory ?? process.cwd();
+      const filePath = path2.resolve(baseDir, args.file);
+      if (!fileReader.exists(filePath)) {
+        const formatter2 = createFormatter();
+        const result2 = {
+          success: false,
+          matches: [],
+          error: {
+            code: "FILE_NOT_FOUND" /* FILE_NOT_FOUND */,
+            details: { file: args.file }
+          }
+        };
+        return formatter2.format(result2);
+      }
+      const code = fileReader.read(filePath);
+      const finder = createFinder();
+      const result = finder.find({
+        code,
+        symbol: args.symbol,
+        fragment: args.fragment
+      });
+      const formatter = createFormatter();
+      return formatter.format(result);
     }
-    const code = fs.readFileSync(filePath, "utf-8");
-    const finder = new SymbolFinder();
-    const result = finder.find({
-      code,
-      symbol: args.symbol,
-      fragment: args.fragment
-    });
-    const formatter = new LLMFormatter();
-    return formatter.format(result);
-  }
-};
-var opencode_tool_default = definition;
+  };
+}
+var opencode_tool_default = createDefinition();
 export {
+  createDefinition,
   opencode_tool_default as default
 };

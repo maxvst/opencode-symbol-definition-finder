@@ -53,7 +53,7 @@ describe('Formatters', () => {
       const result: FinderResult = {
         success: false,
         matches: [],
-        error: { code: FinderErrorCode.EMPTY_CODE, message: 'Code is empty' }
+        error: { code: FinderErrorCode.EMPTY_CODE }
       };
 
       const output = formatter.format(result);
@@ -145,14 +145,14 @@ describe('Formatters', () => {
       const result: FinderResult = {
         success: false,
         matches: [],
-        error: { code: FinderErrorCode.EMPTY_CODE, message: 'Code is empty' }
+        error: { code: FinderErrorCode.EMPTY_CODE }
       };
 
       const output = formatter.format(result);
 
       expect(output).toContain('STATUS: ERROR');
       expect(output).toContain('ERROR_CODE: EMPTY_CODE');
-      expect(output).toContain('ERROR: Code is empty');
+      expect(output).toContain('ERROR: Code is empty. Provide the correct file path');
       expect(output).not.toContain('MATCH_');
     });
 

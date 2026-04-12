@@ -22,7 +22,7 @@ export enum FinderErrorCode {
 
 export interface FinderError {
   readonly code: FinderErrorCode;
-  readonly message: string;
+  readonly details?: Record<string, string>;
 }
 
 export type FinderResult =
