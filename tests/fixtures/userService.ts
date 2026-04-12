@@ -17,7 +17,7 @@ class UserService {
 
   async fetchUserData(url: string): Promise<User[]> {
     const response = await fetch(url);
-    return response.json();
+    return response.json() as Promise<User[]>;
   }
 }
 
