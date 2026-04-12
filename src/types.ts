@@ -52,8 +52,27 @@ export interface SymbolFinderOptions {
   readonly contextLines?: number;
 }
 
-export type OutputFormat = 'json' | 'llm';
+export type OutputFormat = 'json' | 'llm' | 'lsp';
 
-export interface Formatter {
-  format(result: FinderResult): string;
+export interface Formatter<T = string> {
+  format(result: FinderResult): T;
+}
+
+export interface LspFormattedMatch {
+  readonly symbol: string;
+  readonly position: Position;
+  readonly context: string;
+}
+
+export interface LspFormattedIssue {
+  readonly code: string;
+  readonly message: string;
+  readonly cause: string;
+  readonly suggestion: string;
+}
+
+export interface LspFormattedResult {
+  readonly matches: readonly LspFormattedMatch[];
+  readonly errors: readonly LspFormattedIssue[];
+  readonly warnings: readonly LspFormattedIssue[];
 }

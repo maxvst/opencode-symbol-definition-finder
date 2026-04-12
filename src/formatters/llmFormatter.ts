@@ -1,6 +1,6 @@
 import { Formatter, FinderResult, FinderError, FinderErrorCode, FinderWarning, FinderWarningCode } from '../types';
 
-export class LLMFormatter implements Formatter {
+export class LLMFormatter implements Formatter<string> {
   format(result: FinderResult): string {
     const lines: string[] = [];
 

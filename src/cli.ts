@@ -63,7 +63,7 @@ Options:
   -f, --file <path>       Path to the code file (required)
   -s, --symbol <name>     Symbol name to find (required)
   -F, --fragment <code>   Code fragment where the symbol is used (required)
-  -m, --format <format>   Output format: json | llm (default: json)
+  -m, --format <format>   Output format: json | llm | lsp (default: json)
   -b, --best-effort       Always return one position with best-effort fallback
   -h, --help              Show this help message
 
@@ -110,7 +110,7 @@ function main(): void {
   const formatter = factory.getFormatter(options.format);
   const output = formatter.format(result);
 
-  console.log(output);
+  console.log(typeof output === 'string' ? output : JSON.stringify(output, null, 2));
 }
 
 main();

@@ -1,6 +1,7 @@
 import { FormatterFactory } from '../src/formatters/formatterFactory';
 import { JsonFormatter } from '../src/formatters/jsonFormatter';
 import { LLMFormatter } from '../src/formatters/llmFormatter';
+import { LspFormatter } from '../src/formatters/lspFormatter';
 import { Formatter } from '../src/types';
 
 describe('FormatterFactory', () => {
@@ -20,6 +21,11 @@ describe('FormatterFactory', () => {
     expect(formatter).toBeInstanceOf(LLMFormatter);
   });
 
+  it('should return LspFormatter for lsp format', () => {
+    const formatter = factory.getFormatter('lsp');
+    expect(formatter).toBeInstanceOf(LspFormatter);
+  });
+
   it('should throw error for unknown format', () => {
     expect(() => {
       factory.getFormatter('unknown');
@@ -31,10 +37,11 @@ describe('FormatterFactory', () => {
 
     expect(formats).toContain('json');
     expect(formats).toContain('llm');
+    expect(formats).toContain('lsp');
   });
 
   it('should allow registering custom formatters', () => {
-    class CustomFormatter implements Formatter {
+    class CustomFormatter implements Formatter<string> {
       format(): string {
         return 'custom output';
       }

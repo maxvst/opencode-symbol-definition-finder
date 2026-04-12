@@ -1,6 +1,6 @@
 import { Formatter, FinderResult, FinderError, FinderErrorCode } from '../types';
 
-export class JsonFormatter implements Formatter {
+export class JsonFormatter implements Formatter<string> {
   format(result: FinderResult): string {
     return JSON.stringify({
       matches: result.matches,

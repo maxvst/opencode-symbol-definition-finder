@@ -9,7 +9,7 @@ import { LLMFormatter } from "./formatters/llmFormatter";
 export interface ToolDeps {
   readonly fileReader?: FileReader;
   readonly createFinder?: () => SymbolFinder;
-  readonly createFormatter?: () => Formatter;
+  readonly createFormatter?: () => Formatter<unknown>;
 }
 
 function createDefaultDeps(): Required<ToolDeps> {
@@ -72,7 +72,7 @@ function createDefinition(deps?: ToolDeps) {
             errors: [{ code: FinderErrorCode.FILE_NOT_FOUND, details: { file: args.file } }],
             warnings: [],
           };
-          return formatter.format(result);
+          return formatOutput(formatter, result);
         }
 
         const result: FinderResult = {
@@ -80,7 +80,7 @@ function createDefinition(deps?: ToolDeps) {
           errors: [{ code: FinderErrorCode.FILE_NOT_FOUND, details: { file: args.file } }],
           warnings: [],
         };
-        return formatter.format(result);
+        return formatOutput(formatter, result);
       }
 
       const code = fileReader.read(filePath);
@@ -91,10 +91,15 @@ function createDefinition(deps?: ToolDeps) {
         fragment: args.fragment,
         bestEffort: args.bestEffort,
       });
-      return formatter.format(result);
+      return formatOutput(formatter, result);
     },
   };
 }
 
 export default createDefinition();
 export { createDefinition };
+
+function formatOutput(formatter: Formatter<unknown>, result: FinderResult): string {
+  const output = formatter.format(result);
+  return typeof output === 'string' ? output : JSON.stringify(output);
+}
