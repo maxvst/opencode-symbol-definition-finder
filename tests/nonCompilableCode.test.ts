@@ -22,7 +22,7 @@ broken(
         fragment: 'broken('
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches.length).toBeGreaterThanOrEqual(1);
 
       const line2Match = result.matches.find(m => m.position.line === 2);
@@ -42,7 +42,7 @@ class Incomplete {
         fragment: 'class Incomplete {'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(2);
       expect(result.matches[0]?.position.column).toBe(7);

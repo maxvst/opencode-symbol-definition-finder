@@ -1,17 +1,23 @@
-import { Formatter, FinderResult, FinderError, FinderErrorCode } from '../types';
+import { Formatter, FinderResult, FinderError, FinderErrorCode, FinderWarning, FinderWarningCode } from '../types';
 
 export class LLMFormatter implements Formatter {
   format(result: FinderResult): string {
     const lines: string[] = [];
 
-    if (!result.success) {
+    const hasErrors = result.errors.length > 0;
+    const hasWarnings = result.warnings.length > 0;
+    const hasMatches = result.matches.length > 0;
+
+    if (hasErrors && !hasMatches) {
       lines.push('STATUS: ERROR');
-      lines.push(`ERROR_CODE: ${result.error.code}`);
-      lines.push(`ERROR: ${this.formatErrorMessage(result.error)}`);
+      result.errors.forEach((error, index) => {
+        lines.push(`ERROR_${index + 1}_CODE: ${error.code}`);
+        lines.push(`ERROR_${index + 1}: ${this.formatErrorMessage(error)}`);
+      });
       return lines.join('\n');
     }
 
-    if (result.matches.length === 0) {
+    if (!hasMatches) {
       lines.push('STATUS: NOT_FOUND');
       lines.push('HINT: The symbol was not found at any location matching the fragment in the file. Verify the symbol name and fragment are correct and that the file contains the expected code. If the file does not contain the expected code, use other tools such as "read file" or "search in files" to locate the symbol.');
       return lines.join('\n');
@@ -19,6 +25,27 @@ export class LLMFormatter implements Formatter {
 
     lines.push('STATUS: FOUND');
     lines.push(`MATCH_COUNT: ${result.matches.length}`);
+
+    if (hasErrors) {
+      lines.push('');
+      lines.push('ERRORS:');
+      result.errors.forEach((error, index) => {
+        lines.push(`  - ERROR_${index + 1}:`);
+        lines.push(`      CODE: ${error.code}`);
+        lines.push(`      MESSAGE: ${this.formatErrorMessage(error)}`);
+      });
+    }
+
+    if (hasWarnings) {
+      lines.push('');
+      lines.push('WARNINGS:');
+      result.warnings.forEach((warning, index) => {
+        lines.push(`  - WARNING_${index + 1}:`);
+        lines.push(`      CODE: ${warning.code}`);
+        lines.push(`      MESSAGE: ${this.formatWarningMessage(warning)}`);
+      });
+    }
+
     lines.push('');
     lines.push('MATCHES:');
 
@@ -35,6 +62,20 @@ export class LLMFormatter implements Formatter {
     });
 
     return lines.join('\n');
+  }
+
+  private formatWarningMessage(warning: FinderWarning): string {
+    switch (warning.code) {
+      case FinderWarningCode.MULTIPLE_MATCHES: {
+        const total = warning.details?.['totalMatches'] ?? 'unknown';
+        const linesStr = warning.details?.['lines'] ?? 'unknown';
+        return `Multiple matches found (${total}). Returning first match at line(s): ${linesStr}. Use a more specific fragment to disambiguate.`;
+      }
+      case FinderWarningCode.FRAGMENT_FALLBACK: {
+        const reason = warning.details?.['reason'] ?? 'unknown';
+        return `Fragment was not usable (reason: ${reason}). Searched by symbol name only. The result may not be precise.`;
+      }
+    }
   }
 
   private formatErrorMessage(error: FinderError): string {
@@ -54,7 +95,7 @@ export class LLMFormatter implements Formatter {
       case FinderErrorCode.SYMBOL_NOT_UNIQUE_IN_FRAGMENT:
         return 'Symbol appears multiple times in the fragment. Provide a larger fragment where the symbol occurs exactly once so the correct occurrence can be uniquely identified.';
       case FinderErrorCode.NO_MATCHES:
-        return 'No matches found.';
+        return 'No matches found. Returning fallback position (1:1). Use other tools to locate the symbol manually.';
     }
   }
 }

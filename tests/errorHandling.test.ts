@@ -16,11 +16,10 @@ describe('SymbolFinder', () => {
         fragment: 'test()'
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.EMPTY_CODE);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.EMPTY_CODE);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
 
     it('should return error for empty symbol', () => {
@@ -30,11 +29,10 @@ describe('SymbolFinder', () => {
         fragment: 'test()'
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.EMPTY_SYMBOL);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.EMPTY_SYMBOL);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
 
     it('should return error for empty fragment', () => {
@@ -44,11 +42,10 @@ describe('SymbolFinder', () => {
         fragment: ''
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.EMPTY_FRAGMENT);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.EMPTY_FRAGMENT);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
 
     it('should handle not found symbol gracefully', () => {
@@ -58,8 +55,9 @@ describe('SymbolFinder', () => {
         fragment: 'nonexistent()'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
   });
 
@@ -71,11 +69,10 @@ describe('SymbolFinder', () => {
         fragment: 'bar()'
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
 
     it('should return error when fragment is in code but does not contain the symbol', () => {
@@ -93,11 +90,10 @@ describe('SymbolFinder', () => {
         fragment: 'bar()'
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
 
     it('should return error when fragment is near symbol in code but does not contain symbol name', () => {
@@ -107,11 +103,10 @@ describe('SymbolFinder', () => {
         fragment: 'bar()'
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.SYMBOL_NOT_IN_FRAGMENT);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
   });
 
@@ -123,11 +118,10 @@ describe('SymbolFinder', () => {
         fragment: 'test()'
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.INVALID_SYMBOL);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.INVALID_SYMBOL);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
 
     it('should return error when symbol contains brackets', () => {
@@ -137,11 +131,10 @@ describe('SymbolFinder', () => {
         fragment: 'test[0]'
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.INVALID_SYMBOL);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.INVALID_SYMBOL);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
 
     it('should return error when symbol has leading and trailing spaces', () => {
@@ -151,11 +144,10 @@ describe('SymbolFinder', () => {
         fragment: 'test()'
       });
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.code).toBe(FinderErrorCode.INVALID_SYMBOL);
-      }
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe(FinderErrorCode.INVALID_SYMBOL);
       expect(result.matches).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
   });
 });

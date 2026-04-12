@@ -26,7 +26,7 @@ const sum = calculateTotal ( products );
         fragment: 'calculateTotal(products)'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(10);
@@ -48,7 +48,7 @@ add(1, 2);
         fragment: 'add  (  1  ,  2  )  ;'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(6);
@@ -73,7 +73,7 @@ svc.fetchData();
         fragment: "\t\tsvc.fetchData();"
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(9);

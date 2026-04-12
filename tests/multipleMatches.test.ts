@@ -24,7 +24,7 @@ log('third');
         fragment: "log('second');"
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(7);
@@ -44,7 +44,7 @@ process(value);
         fragment: 'process(value);'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(2);
 
       expect(result.matches[0]?.position.line).toBe(2);
@@ -78,7 +78,7 @@ process(value);
         fragment: 'process(value);'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(14);
@@ -103,7 +103,7 @@ process(value);
         fragment: 'fetch(url)'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(3);
 
       expect(result.matches[0]?.position.line).toBe(2);
@@ -132,7 +132,7 @@ process(value);
         fragment: 'getValue()'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(3);
 
       expect(result.matches[0]?.position.line).toBe(1);

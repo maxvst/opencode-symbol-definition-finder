@@ -13,8 +13,8 @@ describe('opencode-tool execute', () => {
     );
 
     expect(result).toContain('STATUS: ERROR');
-    expect(result).toContain('ERROR_CODE: FILE_NOT_FOUND');
-    expect(result).toContain('File not found: nonexistent.ts');
+    expect(result).toContain('FILE_NOT_FOUND');
+    expect(result).toContain('nonexistent.ts');
   });
 
   it('should return formatted error when file path is completely wrong', async () => {
@@ -24,7 +24,7 @@ describe('opencode-tool execute', () => {
     );
 
     expect(result).toContain('STATUS: ERROR');
-    expect(result).toContain('ERROR_CODE: FILE_NOT_FOUND');
+    expect(result).toContain('FILE_NOT_FOUND');
   });
 
   it('should find symbol in existing file', async () => {
@@ -54,6 +54,46 @@ describe('opencode-tool execute', () => {
     );
 
     expect(result).toContain('STATUS: ERROR');
-    expect(result).toContain('ERROR_CODE: FILE_NOT_FOUND');
+    expect(result).toContain('FILE_NOT_FOUND');
+  });
+
+  describe('bestEffort=true', () => {
+    it('should return fallback position with error when file not found', async () => {
+      const result = await definition.execute(
+        { file: 'nonexistent.ts', symbol: 'foo', fragment: 'foo()', bestEffort: true },
+        context
+      );
+
+      expect(result).toContain('STATUS: FOUND');
+      expect(result).toContain('LINE: 1');
+      expect(result).toContain('COLUMN: 1');
+      expect(result).toContain('ERRORS:');
+      expect(result).toContain('FILE_NOT_FOUND');
+    });
+
+    it('should return single match without errors or warnings when symbol found', async () => {
+      const result = await definition.execute(
+        { file: 'src/calculator.ts', symbol: 'add', fragment: 'add(2, 3)', bestEffort: true },
+        context
+      );
+
+      expect(result).toContain('STATUS: FOUND');
+      expect(result).toContain('SYMBOL: add');
+      expect(result).not.toContain('ERRORS:');
+      expect(result).not.toContain('WARNINGS:');
+    });
+
+    it('should return fallback with error when symbol not found in file', async () => {
+      const result = await definition.execute(
+        { file: 'src/calculator.ts', symbol: 'nonexistent', fragment: 'nonexistent()', bestEffort: true },
+        context
+      );
+
+      expect(result).toContain('STATUS: FOUND');
+      expect(result).toContain('LINE: 1');
+      expect(result).toContain('COLUMN: 1');
+      expect(result).toContain('ERRORS:');
+      expect(result).toContain('NO_MATCHES');
+    });
   });
 });

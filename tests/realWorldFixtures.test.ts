@@ -22,7 +22,7 @@ describe('SymbolFinder', () => {
         fragment: 'double sum = calc.add(5.0, 3.0);'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       const callMatch = result.matches.find(m => m.position.line === 45);
@@ -41,7 +41,7 @@ describe('SymbolFinder', () => {
         fragment: 'findUserById(id: number)'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(14);
       expect(result.matches[0]?.position.column).toBe(3);
@@ -58,7 +58,7 @@ describe('SymbolFinder', () => {
         fragment: 'return [self.process_item(item) for item in items]'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       const usageMatch = result.matches.find(m => m.position.line === 18);

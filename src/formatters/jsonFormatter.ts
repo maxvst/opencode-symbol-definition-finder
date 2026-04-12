@@ -2,20 +2,17 @@ import { Formatter, FinderResult, FinderError, FinderErrorCode } from '../types'
 
 export class JsonFormatter implements Formatter {
   format(result: FinderResult): string {
-    if (result.success) {
-      return JSON.stringify({
-        success: true,
-        matches: result.matches,
-      }, null, 2);
-    }
-
     return JSON.stringify({
-      success: false,
-      matches: [],
-      error: {
-        code: result.error.code,
-        message: this.formatErrorMessage(result.error),
-      },
+      matches: result.matches,
+      errors: result.errors.map((e) => ({
+        code: e.code,
+        message: this.formatErrorMessage(e),
+        ...e.details,
+      })),
+      warnings: result.warnings.map((w) => ({
+        code: w.code,
+        ...w.details,
+      })),
     }, null, 2);
   }
 

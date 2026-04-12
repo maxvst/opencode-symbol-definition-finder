@@ -25,14 +25,27 @@ export interface FinderError {
   readonly details?: Record<string, string>;
 }
 
-export type FinderResult =
-  | { readonly success: true; readonly matches: readonly SymbolMatch[] }
-  | { readonly success: false; readonly matches: readonly []; readonly error: FinderError };
+export enum FinderWarningCode {
+  MULTIPLE_MATCHES = 'MULTIPLE_MATCHES',
+  FRAGMENT_FALLBACK = 'FRAGMENT_FALLBACK',
+}
+
+export interface FinderWarning {
+  readonly code: FinderWarningCode;
+  readonly details?: Record<string, string | number>;
+}
+
+export interface FinderResult {
+  readonly matches: readonly SymbolMatch[];
+  readonly errors: readonly FinderError[];
+  readonly warnings: readonly FinderWarning[];
+}
 
 export interface FinderOptions {
   readonly code: string;
   readonly symbol: string;
   readonly fragment: string;
+  readonly bestEffort?: boolean;
 }
 
 export interface SymbolFinderOptions {

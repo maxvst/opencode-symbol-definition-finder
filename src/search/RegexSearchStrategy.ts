@@ -3,7 +3,7 @@ import { SearchStrategy } from './SearchStrategy';
 import { normalizeForComparison, escapeRegExp } from '../utils/textNormalizer';
 
 export class RegexSearchStrategy implements SearchStrategy {
-  search(code: string, symbol: string, fragment: string, contextLines: number): SymbolMatch[] {
+  search(code: string, symbol: string, fragment: string | undefined, contextLines: number): SymbolMatch[] {
     const symbolPattern = `\\b${escapeRegExp(symbol)}\\b`;
     const symbolRegex = new RegExp(symbolPattern, 'g');
 
@@ -23,10 +23,18 @@ export class RegexSearchStrategy implements SearchStrategy {
       }
     }
 
+    if (!fragment || fragment.trim().length === 0) {
+      return this.buildMatchesFromOccurrences(originalOccurrences, symbol, lines, contextLines);
+    }
+
     const normalizedCode = normalizeForComparison(code);
     const normalizedFragment = normalizeForComparison(fragment);
 
     const symbolOffsetInFragment = this.findSymbolOffset(normalizedFragment, symbolRegex);
+    if (symbolOffsetInFragment < 0) {
+      return this.buildMatchesFromOccurrences(originalOccurrences, symbol, lines, contextLines);
+    }
+
     const normalizedSymbolPositions = this.findAllPositions(normalizedCode, symbolRegex);
 
     const matches: SymbolMatch[] = [];
@@ -51,6 +59,21 @@ export class RegexSearchStrategy implements SearchStrategy {
     }
 
     return this.deduplicateMatches(matches);
+  }
+
+  private buildMatchesFromOccurrences(
+    occurrences: readonly { readonly line: number; readonly column: number }[],
+    symbol: string,
+    lines: string[],
+    contextLines: number,
+  ): SymbolMatch[] {
+    return this.deduplicateMatches(
+      occurrences.map((occ) => ({
+        symbol,
+        position: { line: occ.line, column: occ.column },
+        context: this.extractContext(lines, occ.line - 1, contextLines),
+      })),
+    );
   }
 
   private findSymbolOffset(text: string, regex: RegExp): number {

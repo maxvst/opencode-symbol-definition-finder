@@ -22,7 +22,7 @@ hello();
         fragment: 'hello();'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(6);
@@ -44,7 +44,7 @@ const result = add(2, 3);
         fragment: 'function add(a, b) {'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(2);
@@ -69,7 +69,7 @@ calc.add(5, 10);
         fragment: 'calc.add(5, 10);'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(9);

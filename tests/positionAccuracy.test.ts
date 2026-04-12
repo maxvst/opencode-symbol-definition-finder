@@ -21,7 +21,7 @@ line5`;
         fragment: 'function target() {}'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(4);
       expect(result.matches[0]?.position.column).toBe(10);
@@ -37,7 +37,7 @@ line5`;
         fragment: 'function test() {}'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.column).toBe(14);
       expect(result.matches[0]?.position.line).toBe(1);

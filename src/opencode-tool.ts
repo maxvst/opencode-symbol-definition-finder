@@ -1,8 +1,7 @@
 import { z } from "zod";
 import * as path from "path";
 import { SymbolFinder } from "./symbolFinder";
-import { Formatter } from "./types";
-import { FinderErrorCode, FinderResult } from "./types";
+import { Formatter, FinderResult, FinderErrorCode, SymbolMatch } from "./types";
 import { FileReader } from "./fileReader";
 import { NodeFileReader } from "./nodeFileReader";
 import { LLMFormatter } from "./formatters/llmFormatter";
@@ -46,23 +45,40 @@ function createDefinition(deps?: ToolDeps) {
         .describe(
           "Code fragment containing the symbol, used to disambiguate between multiple occurrences"
         ),
+      bestEffort: z
+        .boolean()
+        .optional()
+        .describe(
+          "When true, always returns exactly one position even if input is incomplete or ambiguous. Returns the best available match with warnings."
+        ),
     },
     async execute(
-      args: { file: string; symbol: string; fragment: string },
+      args: { file: string; symbol: string; fragment: string; bestEffort?: boolean },
       context: { directory: string; worktree: string }
     ): Promise<string> {
       const baseDir = context.directory ?? process.cwd();
       const filePath = path.resolve(baseDir, args.file);
+      const formatter = createFormatter();
 
       if (!fileReader.exists(filePath)) {
-        const formatter = createFormatter();
+        if (args.bestEffort) {
+          const fallbackMatch: SymbolMatch = {
+            symbol: '',
+            position: { line: 1, column: 1 },
+            context: '',
+          };
+          const result: FinderResult = {
+            matches: [fallbackMatch],
+            errors: [{ code: FinderErrorCode.FILE_NOT_FOUND, details: { file: args.file } }],
+            warnings: [],
+          };
+          return formatter.format(result);
+        }
+
         const result: FinderResult = {
-          success: false,
           matches: [],
-          error: {
-            code: FinderErrorCode.FILE_NOT_FOUND,
-            details: { file: args.file },
-          },
+          errors: [{ code: FinderErrorCode.FILE_NOT_FOUND, details: { file: args.file } }],
+          warnings: [],
         };
         return formatter.format(result);
       }
@@ -73,8 +89,8 @@ function createDefinition(deps?: ToolDeps) {
         code,
         symbol: args.symbol,
         fragment: args.fragment,
+        bestEffort: args.bestEffort,
       });
-      const formatter = createFormatter();
       return formatter.format(result);
     },
   };

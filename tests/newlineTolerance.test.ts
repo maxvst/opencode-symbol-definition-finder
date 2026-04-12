@@ -24,7 +24,7 @@ describe('SymbolFinder', () => {
         fragment: 'const result = transform(data);\n  return result;',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(2);
       expect(result.matches[0]?.position.column).toBe(18);
@@ -44,7 +44,7 @@ describe('SymbolFinder', () => {
         fragment: 'function greet(name) { return "Hello, " + name; }',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(1);
       expect(result.matches[0]?.position.column).toBe(10);
@@ -60,7 +60,7 @@ describe('SymbolFinder', () => {
         fragment: 'function add(a, b) {\n  return a + b;\n}',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(1);
       expect(result.matches[0]?.position.column).toBe(10);
@@ -84,7 +84,7 @@ describe('SymbolFinder', () => {
         fragment: 'class Calculator { add(a, b) { return a + b; } }',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(2);
       expect(result.matches[0]?.position.column).toBe(3);
@@ -105,7 +105,7 @@ describe('SymbolFinder', () => {
         fragment: 'const items = getData(); const filtered = filter(items);',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(2);
       expect(result.matches[0]?.position.column).toBe(18);
@@ -123,7 +123,7 @@ describe('SymbolFinder', () => {
         fragment: 'function init() {\n  const x = loadData();\n  return x;\n}',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(1);
       expect(result.matches[0]?.position.column).toBe(29);
@@ -139,7 +139,7 @@ describe('SymbolFinder', () => {
         fragment: 'const value =\n  compute(\n    input\n  );',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(1);
       expect(result.matches[0]?.position.column).toBe(15);
@@ -157,7 +157,7 @@ describe('SymbolFinder', () => {
         fragment: "function parse(input) {\r\n  const tokens = tokenize(input);\r\n  return tokens;\r\n}",
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(2);
       expect(result.matches[0]?.position.column).toBe(18);
@@ -173,7 +173,7 @@ describe('SymbolFinder', () => {
         fragment: "function render(data) {\n  const html = buildHtml(data);\n  return html;\n}",
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(2);
       expect(result.matches[0]?.position.column).toBe(16);
@@ -189,7 +189,7 @@ describe('SymbolFinder', () => {
         fragment: "class Service {\n  fetch(url) {\r\n    return http(url);\n  }\r\n}",
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(3);
       expect(result.matches[0]?.position.column).toBe(12);
@@ -205,7 +205,7 @@ describe('SymbolFinder', () => {
         fragment: 'function validate(value) { const isValid = check(value); return isValid; }',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0]?.position.line).toBe(2);
       expect(result.matches[0]?.position.column).toBe(19);

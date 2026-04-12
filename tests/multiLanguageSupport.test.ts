@@ -21,7 +21,7 @@ result = process_data(10)
         fragment: 'result = process_data(10)'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(5);
@@ -46,7 +46,7 @@ int main() {
         fragment: 'int result = calculate(5);'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(7);
@@ -74,7 +74,7 @@ greet(u);
         fragment: 'greet(u);'
       });
 
-      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
       expect(result.matches).toHaveLength(1);
 
       expect(result.matches[0]?.position.line).toBe(12);

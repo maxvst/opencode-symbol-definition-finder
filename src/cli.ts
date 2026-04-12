@@ -10,6 +10,7 @@ interface CLIOptions {
   symbol: string;
   fragment: string;
   format: string;
+  bestEffort: boolean;
 }
 
 function parseArgs(): CLIOptions {
@@ -27,6 +28,8 @@ function parseArgs(): CLIOptions {
       options.fragment = args[++i];
     } else if (arg === '--format' || arg === '-m') {
       options.format = args[++i];
+    } else if (arg === '--best-effort' || arg === '-b') {
+      options.bestEffort = true;
     } else if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -43,6 +46,10 @@ function parseArgs(): CLIOptions {
     options.format = 'json';
   }
 
+  if (options.bestEffort === undefined) {
+    options.bestEffort = false;
+  }
+
   return options as CLIOptions;
 }
 
@@ -57,6 +64,7 @@ Options:
   -s, --symbol <name>     Symbol name to find (required)
   -F, --fragment <code>   Code fragment where the symbol is used (required)
   -m, --format <format>   Output format: json | llm (default: json)
+  -b, --best-effort       Always return one position with best-effort fallback
   -h, --help              Show this help message
 
 Examples:
@@ -96,6 +104,7 @@ function main(): void {
     code,
     symbol: options.symbol,
     fragment: options.fragment,
+    bestEffort: options.bestEffort,
   });
 
   const formatter = factory.getFormatter(options.format);
