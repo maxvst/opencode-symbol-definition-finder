@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { SymbolFinder } from "./symbolFinder";
 import { LLMFormatter } from "./formatters/llmFormatter";
+import { FinderErrorCode, FinderResult } from "./types";
 
 const definition = {
   description:
@@ -32,7 +33,16 @@ const definition = {
     const filePath = path.resolve(baseDir, args.file);
 
     if (!fs.existsSync(filePath)) {
-      return `Error: File not found: ${filePath}. Verify the file path is correct relative to the project directory. Use tools like "list directory" or "search files" to locate the file.`;
+      const formatter = new LLMFormatter();
+      const result: FinderResult = {
+        success: false,
+        matches: [],
+        error: {
+          code: FinderErrorCode.FILE_NOT_FOUND,
+          message: `File not found: ${args.file}. Verify the file path is correct relative to the project directory. Use tools like "list directory" or "search files" to locate the file.`,
+        },
+      };
+      return formatter.format(result);
     }
 
     const code = fs.readFileSync(filePath, "utf-8");

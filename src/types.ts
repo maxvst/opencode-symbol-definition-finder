@@ -10,6 +10,7 @@ export interface SymbolMatch {
 }
 
 export enum FinderErrorCode {
+  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
   EMPTY_CODE = 'EMPTY_CODE',
   EMPTY_SYMBOL = 'EMPTY_SYMBOL',
   EMPTY_FRAGMENT = 'EMPTY_FRAGMENT',
