@@ -13775,7 +13775,7 @@ config(en_default());
 // src/opencode-tool.ts
 import * as path2 from "path";
 
-// src/validation/ValidationChain.ts
+// src/semantic-lsp-transformer/validation/ValidationChain.ts
 var ValidationChain = class {
   constructor(validators) {
     this.validators = validators;
@@ -13791,7 +13791,7 @@ var ValidationChain = class {
   }
 };
 
-// src/validation/EmptyCodeValidator.ts
+// src/semantic-lsp-transformer/validation/EmptyCodeValidator.ts
 var EmptyCodeValidator = class {
   validate(options) {
     if (!options.code || options.code.trim().length === 0) {
@@ -13801,7 +13801,7 @@ var EmptyCodeValidator = class {
   }
 };
 
-// src/validation/EmptySymbolValidator.ts
+// src/semantic-lsp-transformer/validation/EmptySymbolValidator.ts
 var EmptySymbolValidator = class {
   validate(options) {
     if (!options.symbol || options.symbol.trim().length === 0) {
@@ -13811,7 +13811,7 @@ var EmptySymbolValidator = class {
   }
 };
 
-// src/validation/EmptyFragmentValidator.ts
+// src/semantic-lsp-transformer/validation/EmptyFragmentValidator.ts
 var EmptyFragmentValidator = class {
   validate(options) {
     if (!options.fragment || options.fragment.trim().length === 0) {
@@ -13821,7 +13821,7 @@ var EmptyFragmentValidator = class {
   }
 };
 
-// src/validation/InvalidSymbolValidator.ts
+// src/semantic-lsp-transformer/validation/InvalidSymbolValidator.ts
 var InvalidSymbolValidator = class {
   validate(options) {
     const symbol2 = options.symbol;
@@ -13836,7 +13836,7 @@ var InvalidSymbolValidator = class {
   }
 };
 
-// src/utils/textNormalizer.ts
+// src/semantic-lsp-transformer/utils/textNormalizer.ts
 function escapeRegExp(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -13844,7 +13844,7 @@ function normalizeForComparison(text) {
   return text.replace(/\s+/g, " ").replace(/\s*,\s*/g, ", ").replace(/\s*\(\s*/g, "(").replace(/\s*\)\s*/g, ")").replace(/\s*\{\s*/g, "{").replace(/\s*\}\s*/g, "}").replace(/\s*=\s*/g, "=").replace(/\s*:\s*/g, ":").replace(/\s*;\s*/g, ";").trim();
 }
 
-// src/validation/SymbolInFragmentValidator.ts
+// src/semantic-lsp-transformer/validation/SymbolInFragmentValidator.ts
 var SymbolInFragmentValidator = class {
   validate(options) {
     const symbolPattern = `\\b${escapeRegExp(options.symbol)}\\b`;
@@ -13861,7 +13861,7 @@ var SymbolInFragmentValidator = class {
   }
 };
 
-// src/search/RegexSearchStrategy.ts
+// src/semantic-lsp-transformer/search/RegexSearchStrategy.ts
 var RegexSearchStrategy = class {
   search(code, symbol2, fragment, contextLines) {
     const symbolPattern = `\\b${escapeRegExp(symbol2)}\\b`;
@@ -13879,9 +13879,15 @@ var RegexSearchStrategy = class {
         });
       }
     }
+    if (!fragment || fragment.trim().length === 0) {
+      return this.buildMatchesFromOccurrences(originalOccurrences, symbol2, lines, contextLines);
+    }
     const normalizedCode = normalizeForComparison(code);
     const normalizedFragment = normalizeForComparison(fragment);
     const symbolOffsetInFragment = this.findSymbolOffset(normalizedFragment, symbolRegex);
+    if (symbolOffsetInFragment < 0) {
+      return this.buildMatchesFromOccurrences(originalOccurrences, symbol2, lines, contextLines);
+    }
     const normalizedSymbolPositions = this.findAllPositions(normalizedCode, symbolRegex);
     const matches = [];
     for (let i = 0; i < normalizedSymbolPositions.length; i++) {
@@ -13898,6 +13904,15 @@ var RegexSearchStrategy = class {
       }
     }
     return this.deduplicateMatches(matches);
+  }
+  buildMatchesFromOccurrences(occurrences, symbol2, lines, contextLines) {
+    return this.deduplicateMatches(
+      occurrences.map((occ) => ({
+        symbol: symbol2,
+        position: { line: occ.line, column: occ.column },
+        context: this.extractContext(lines, occ.line - 1, contextLines)
+      }))
+    );
   }
   findSymbolOffset(text, regex) {
     regex.lastIndex = 0;
@@ -13939,8 +13954,9 @@ var RegexSearchStrategy = class {
   }
 };
 
-// src/symbolFinder.ts
+// src/semantic-lsp-transformer/SemanticLspTransformer.ts
 var DEFAULT_CONTEXT_LINES = 3;
+var FALLBACK_POSITION = { line: 1, column: 1 };
 function createDefaultValidators() {
   return new ValidationChain([
     new EmptyCodeValidator(),
@@ -13950,7 +13966,7 @@ function createDefaultValidators() {
     new SymbolInFragmentValidator()
   ]);
 }
-var SymbolFinder = class {
+var SemanticLspTransformer = class {
   constructor(options = {}) {
     const { contextLines, validator, searchStrategy } = options;
     this.contextLines = contextLines ?? DEFAULT_CONTEXT_LINES;
@@ -13958,9 +13974,12 @@ var SymbolFinder = class {
     this.searchStrategy = searchStrategy ?? new RegexSearchStrategy();
   }
   find(options) {
+    if (options.bestEffort) {
+      return this.findBestEffort(options);
+    }
     const error48 = this.validator.validate(options);
     if (error48 !== null) {
-      return { success: false, matches: [], error: error48 };
+      return { matches: [], errors: [error48], warnings: [] };
     }
     const matches = this.searchStrategy.search(
       options.code,
@@ -13968,11 +13987,84 @@ var SymbolFinder = class {
       options.fragment,
       this.contextLines
     );
-    return { success: true, matches };
+    return { matches, errors: [], warnings: [] };
+  }
+  findBestEffort(options) {
+    const errors = [];
+    const warnings = [];
+    if (!options.code || options.code.trim().length === 0) {
+      return {
+        matches: [this.createFallbackMatch("")],
+        errors: [{ code: "EMPTY_CODE" /* EMPTY_CODE */ }],
+        warnings: []
+      };
+    }
+    if (!options.symbol || options.symbol.trim().length === 0) {
+      return {
+        matches: [this.createFallbackMatch(options.code)],
+        errors: [{ code: "EMPTY_SYMBOL" /* EMPTY_SYMBOL */ }],
+        warnings: []
+      };
+    }
+    let effectiveFragment = options.fragment;
+    const trimmedFragment = effectiveFragment?.trim() ?? "";
+    if (trimmedFragment.length === 0) {
+      warnings.push({
+        code: "FRAGMENT_FALLBACK" /* FRAGMENT_FALLBACK */,
+        details: { reason: "EMPTY_FRAGMENT" }
+      });
+      effectiveFragment = void 0;
+    } else {
+      const symbolPattern = `\\b${escapeRegExp(options.symbol)}\\b`;
+      const symbolRegex = new RegExp(symbolPattern);
+      if (!symbolRegex.test(trimmedFragment)) {
+        warnings.push({
+          code: "FRAGMENT_FALLBACK" /* FRAGMENT_FALLBACK */,
+          details: { reason: "SYMBOL_NOT_IN_FRAGMENT" }
+        });
+        effectiveFragment = void 0;
+      }
+    }
+    const matches = this.searchStrategy.search(
+      options.code,
+      options.symbol,
+      effectiveFragment,
+      this.contextLines
+    );
+    if (matches.length === 0) {
+      errors.push({ code: "NO_MATCHES" /* NO_MATCHES */ });
+      return {
+        matches: [this.createFallbackMatch(options.code)],
+        errors,
+        warnings
+      };
+    }
+    if (matches.length > 1) {
+      warnings.push({
+        code: "MULTIPLE_MATCHES" /* MULTIPLE_MATCHES */,
+        details: {
+          totalMatches: matches.length,
+          lines: matches.map((m) => m.position.line).join(",")
+        }
+      });
+    }
+    return {
+      matches: [matches[0]],
+      errors,
+      warnings
+    };
+  }
+  createFallbackMatch(code) {
+    const contextLines = code.split(/\r?\n/).slice(0, 7).join("\n");
+    return {
+      symbol: "",
+      position: FALLBACK_POSITION,
+      context: contextLines
+    };
   }
 };
 
-// src/nodeFileReader.ts
+// src/infra/nodeFileReader.ts
 import * as fs from "fs";
 import * as path from "path";
 var NodeFileReader = class {
@@ -13985,23 +14077,46 @@ var NodeFileReader = class {
   }
 };
 
-// src/formatters/llmFormatter.ts
+// src/semantic-lsp-transformer/formatters/llmFormatter.ts
 var LLMFormatter = class {
   format(result) {
     const lines = [];
-    if (!result.success) {
+    const hasErrors = result.errors.length > 0;
+    const hasWarnings = result.warnings.length > 0;
+    const hasMatches = result.matches.length > 0;
+    if (hasErrors && !hasMatches) {
       lines.push("STATUS: ERROR");
-      lines.push(`ERROR_CODE: ${result.error.code}`);
-      lines.push(`ERROR: ${this.formatErrorMessage(result.error)}`);
+      result.errors.forEach((error48, index) => {
+        lines.push(`ERROR_${index + 1}_CODE: ${error48.code}`);
+        lines.push(`ERROR_${index + 1}: ${this.formatErrorMessage(error48)}`);
+      });
       return lines.join("\n");
     }
-    if (result.matches.length === 0) {
+    if (!hasMatches) {
       lines.push("STATUS: NOT_FOUND");
       lines.push('HINT: The symbol was not found at any location matching the fragment in the file. Verify the symbol name and fragment are correct and that the file contains the expected code. If the file does not contain the expected code, use other tools such as "read file" or "search in files" to locate the symbol.');
       return lines.join("\n");
     }
     lines.push("STATUS: FOUND");
     lines.push(`MATCH_COUNT: ${result.matches.length}`);
+    if (hasErrors) {
+      lines.push("");
+      lines.push("ERRORS:");
+      result.errors.forEach((error48, index) => {
+        lines.push(`  - ERROR_${index + 1}:`);
+        lines.push(`      CODE: ${error48.code}`);
+        lines.push(`      MESSAGE: ${this.formatErrorMessage(error48)}`);
+      });
+    }
+    if (hasWarnings) {
+      lines.push("");
+      lines.push("WARNINGS:");
+      result.warnings.forEach((warning, index) => {
+        lines.push(`  - WARNING_${index + 1}:`);
+        lines.push(`      CODE: ${warning.code}`);
+        lines.push(`      MESSAGE: ${this.formatWarningMessage(warning)}`);
+      });
+    }
     lines.push("");
     lines.push("MATCHES:");
     result.matches.forEach((match, index) => {
@@ -14016,6 +14131,19 @@ var LLMFormatter = class {
       lines.push("");
     });
     return lines.join("\n");
+  }
+  formatWarningMessage(warning) {
+    switch (warning.code) {
+      case "MULTIPLE_MATCHES" /* MULTIPLE_MATCHES */: {
+        const total = warning.details?.["totalMatches"] ?? "unknown";
+        const linesStr = warning.details?.["lines"] ?? "unknown";
+        return `Multiple matches found (${total}). Returning first match at line(s): ${linesStr}. Use a more specific fragment to disambiguate.`;
+      }
+      case "FRAGMENT_FALLBACK" /* FRAGMENT_FALLBACK */: {
+        const reason = warning.details?.["reason"] ?? "unknown";
+        return `Fragment was not usable (reason: ${reason}). Searched by symbol name only. The result may not be precise.`;
+      }
+    }
   }
   formatErrorMessage(error48) {
     switch (error48.code) {
@@ -14034,7 +14162,7 @@ var LLMFormatter = class {
       case "SYMBOL_NOT_UNIQUE_IN_FRAGMENT" /* SYMBOL_NOT_UNIQUE_IN_FRAGMENT */:
         return "Symbol appears multiple times in the fragment. Provide a larger fragment where the symbol occurs exactly once so the correct occurrence can be uniquely identified.";
       case "NO_MATCHES" /* NO_MATCHES */:
-        return "No matches found.";
+        return "No matches found. Returning fallback position (1:1). Use other tools to locate the symbol manually.";
     }
   }
 };
@@ -14043,7 +14171,7 @@ var LLMFormatter = class {
 function createDefaultDeps() {
   return {
     fileReader: new NodeFileReader(),
-    createFinder: () => new SymbolFinder(),
+    createFinder: () => new SemanticLspTransformer(),
     createFormatter: () => new LLMFormatter()
   };
 }
@@ -14063,36 +14191,53 @@ function createDefinition(deps) {
       ),
       fragment: external_exports.string().describe(
         "Code fragment containing the symbol, used to disambiguate between multiple occurrences"
+      ),
+      bestEffort: external_exports.boolean().optional().describe(
+        "When true, always returns exactly one position even if input is incomplete or ambiguous. Returns the best available match with warnings."
       )
     },
     async execute(args, context) {
       const baseDir = context.directory ?? process.cwd();
       const filePath = path2.resolve(baseDir, args.file);
+      const formatter = createFormatter();
       if (!fileReader.exists(filePath)) {
-        const formatter2 = createFormatter();
+        if (args.bestEffort) {
+          const fallbackMatch = {
+            symbol: "",
+            position: { line: 1, column: 1 },
+            context: ""
+          };
+          const result3 = {
+            matches: [fallbackMatch],
+            errors: [{ code: "FILE_NOT_FOUND" /* FILE_NOT_FOUND */, details: { file: args.file } }],
+            warnings: []
+          };
+          return formatOutput(formatter, result3);
+        }
         const result2 = {
-          success: false,
           matches: [],
-          error: {
-            code: "FILE_NOT_FOUND" /* FILE_NOT_FOUND */,
-            details: { file: args.file }
-          }
+          errors: [{ code: "FILE_NOT_FOUND" /* FILE_NOT_FOUND */, details: { file: args.file } }],
+          warnings: []
         };
-        return formatter2.format(result2);
+        return formatOutput(formatter, result2);
       }
       const code = fileReader.read(filePath);
       const finder = createFinder();
       const result = finder.find({
         code,
         symbol: args.symbol,
-        fragment: args.fragment
+        fragment: args.fragment,
+        bestEffort: args.bestEffort
       });
-      const formatter = createFormatter();
-      return formatter.format(result);
+      return formatOutput(formatter, result);
     }
   };
 }
 var opencode_tool_default = createDefinition();
+function formatOutput(formatter, result) {
+  const output = formatter.format(result);
+  return typeof output === "string" ? output : JSON.stringify(output);
+}
 export {
   createDefinition,
   opencode_tool_default as default
