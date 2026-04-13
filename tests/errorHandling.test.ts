@@ -1,11 +1,11 @@
-import { SymbolFinder } from '../src/symbolFinder';
-import { FinderErrorCode } from '../src/types';
+import { SemanticLspTransformer } from '../src/semantic-lsp-transformer/SemanticLspTransformer';
+import { FinderErrorCode } from '../src/semantic-lsp-transformer/types';
 
-describe('SymbolFinder', () => {
-  let finder: SymbolFinder;
+describe('SemanticLspTransformer', () => {
+  let finder: SemanticLspTransformer;
 
   beforeEach(() => {
-    finder = new SymbolFinder();
+    finder = new SemanticLspTransformer();
   });
 
   describe('Error handling', () => {

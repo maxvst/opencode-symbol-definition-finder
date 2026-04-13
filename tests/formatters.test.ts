@@ -1,7 +1,7 @@
-import { JsonFormatter } from '../src/formatters/jsonFormatter';
-import { LLMFormatter } from '../src/formatters/llmFormatter';
-import { LspFormatter } from '../src/formatters/lspFormatter';
-import { FinderResult, FinderErrorCode, FinderWarningCode } from '../src/types';
+import { JsonFormatter } from '../src/semantic-lsp-transformer/formatters/jsonFormatter';
+import { LLMFormatter } from '../src/semantic-lsp-transformer/formatters/llmFormatter';
+import { LspFormatter } from '../src/semantic-lsp-transformer/formatters/lspFormatter';
+import { FinderResult, FinderErrorCode, FinderWarningCode } from '../src/semantic-lsp-transformer/types';
 
 describe('Formatters', () => {
   describe('JsonFormatter', () => {

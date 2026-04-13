@@ -48,7 +48,7 @@ export interface FinderOptions {
   readonly bestEffort?: boolean;
 }
 
-export interface SymbolFinderOptions {
+export interface SemanticLspTransformerOptions {
   readonly contextLines?: number;
 }
 

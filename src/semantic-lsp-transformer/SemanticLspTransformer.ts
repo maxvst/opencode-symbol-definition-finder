@@ -5,7 +5,7 @@ import {
   FinderErrorCode,
   FinderWarning,
   FinderWarningCode,
-  SymbolFinderOptions,
+  SemanticLspTransformerOptions,
   SymbolMatch,
 } from './types';
 import { InputValidator } from './validation/InputValidator';
@@ -33,17 +33,17 @@ function createDefaultValidators(): InputValidator {
   ]);
 }
 
-export interface SymbolFinderDeps {
+export interface SemanticLspTransformerDeps {
   readonly validator?: InputValidator;
   readonly searchStrategy?: SearchStrategy;
 }
 
-export class SymbolFinder {
+export class SemanticLspTransformer {
   private readonly contextLines: number;
   private readonly validator: InputValidator;
   private readonly searchStrategy: SearchStrategy;
 
-  constructor(options: SymbolFinderOptions & SymbolFinderDeps = {}) {
+  constructor(options: SemanticLspTransformerOptions & SemanticLspTransformerDeps = {}) {
     const { contextLines, validator, searchStrategy } = options;
     this.contextLines = contextLines ?? DEFAULT_CONTEXT_LINES;
     this.validator = validator ?? createDefaultValidators();
@@ -155,6 +155,6 @@ export class SymbolFinder {
 }
 
 export function find(options: FinderOptions): FinderResult {
-  const finder = new SymbolFinder();
-  return finder.find(options);
+  const transformer = new SemanticLspTransformer();
+  return transformer.find(options);
 }

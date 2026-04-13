@@ -1,12 +1,12 @@
-import { SymbolFinder } from '../src/symbolFinder';
+import { SemanticLspTransformer } from '../src/semantic-lsp-transformer/SemanticLspTransformer';
 import * as fs from 'fs';
 import * as path from 'path';
 
-describe('SymbolFinder', () => {
-  let finder: SymbolFinder;
+describe('SemanticLspTransformer', () => {
+  let finder: SemanticLspTransformer;
 
   beforeEach(() => {
-    finder = new SymbolFinder();
+    finder = new SemanticLspTransformer();
   });
 
   describe('Real-world fixtures', () => {

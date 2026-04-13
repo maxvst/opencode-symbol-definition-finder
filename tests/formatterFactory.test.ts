@@ -1,8 +1,8 @@
-import { FormatterFactory } from '../src/formatters/formatterFactory';
-import { JsonFormatter } from '../src/formatters/jsonFormatter';
-import { LLMFormatter } from '../src/formatters/llmFormatter';
-import { LspFormatter } from '../src/formatters/lspFormatter';
-import { Formatter } from '../src/types';
+import { FormatterFactory } from '../src/semantic-lsp-transformer/formatters/formatterFactory';
+import { JsonFormatter } from '../src/semantic-lsp-transformer/formatters/jsonFormatter';
+import { LLMFormatter } from '../src/semantic-lsp-transformer/formatters/llmFormatter';
+import { LspFormatter } from '../src/semantic-lsp-transformer/formatters/lspFormatter';
+import { Formatter } from '../src/semantic-lsp-transformer/types';
 
 describe('FormatterFactory', () => {
   let factory: FormatterFactory;

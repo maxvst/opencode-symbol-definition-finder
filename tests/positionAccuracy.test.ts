@@ -1,10 +1,10 @@
-import { SymbolFinder } from '../src/symbolFinder';
+import { SemanticLspTransformer } from '../src/semantic-lsp-transformer/SemanticLspTransformer';
 
-describe('SymbolFinder', () => {
-  let finder: SymbolFinder;
+describe('SemanticLspTransformer', () => {
+  let finder: SemanticLspTransformer;
 
   beforeEach(() => {
-    finder = new SymbolFinder();
+    finder = new SemanticLspTransformer();
   });
 
   describe('Position accuracy', () => {

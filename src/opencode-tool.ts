@@ -1,21 +1,21 @@
 import { z } from "zod";
 import * as path from "path";
-import { SymbolFinder } from "./symbolFinder";
-import { Formatter, FinderResult, FinderErrorCode, SymbolMatch } from "./types";
-import { FileReader } from "./fileReader";
-import { NodeFileReader } from "./nodeFileReader";
-import { LLMFormatter } from "./formatters/llmFormatter";
+import { SemanticLspTransformer } from "./semantic-lsp-transformer/SemanticLspTransformer";
+import { Formatter, FinderResult, FinderErrorCode, SymbolMatch } from "./semantic-lsp-transformer/types";
+import { FileReader } from "./infra/fileReader";
+import { NodeFileReader } from "./infra/nodeFileReader";
+import { LLMFormatter } from "./semantic-lsp-transformer/formatters/llmFormatter";
 
 export interface ToolDeps {
   readonly fileReader?: FileReader;
-  readonly createFinder?: () => SymbolFinder;
+  readonly createFinder?: () => SemanticLspTransformer;
   readonly createFormatter?: () => Formatter<unknown>;
 }
 
 function createDefaultDeps(): Required<ToolDeps> {
   return {
     fileReader: new NodeFileReader(),
-    createFinder: () => new SymbolFinder(),
+    createFinder: () => new SemanticLspTransformer(),
     createFormatter: () => new LLMFormatter(),
   };
 }

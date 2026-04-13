@@ -2,8 +2,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { SymbolFinder } from './symbolFinder';
-import { FormatterFactory } from './formatters/formatterFactory';
+import { SemanticLspTransformer } from './semantic-lsp-transformer/SemanticLspTransformer';
+import { FormatterFactory } from './semantic-lsp-transformer/formatters/formatterFactory';
 
 interface CLIOptions {
   file: string;
@@ -99,7 +99,7 @@ function main(): void {
   const code = resolveAndReadFile(options.file);
   validateFormat(options.format, factory);
 
-  const finder = new SymbolFinder();
+  const finder = new SemanticLspTransformer();
   const result = finder.find({
     code,
     symbol: options.symbol,
