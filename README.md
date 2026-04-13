@@ -1,113 +1,181 @@
-# Symbol Finder
+# Semantic LSP Plugin для OpenCode
 
-Библиотека для поиска символов в исходном коде и OpenCode Custom Tool для навигации по коду с помощью ИИ.
+Плагин для [OpenCode](https://opencode.ai), который превращает встроенный `lsp` tool в семантически понятный для LLM интерфейс. Вместо указания точных координат (строка, колонка) модель передаёт имя символа и фрагмент кода, а плагин автоматически определяет позицию.
 
-## Возможности
+## Проблема
 
-- Поиск вхождений символа (функция, переменная, класс) в файле исходного кода
-- Дизамбигуация через фрагмент кода — символ должен встречаться в фрагменте ровно один раз
-- Толерантность к форматированию (пробелы, переносы строк)
-- Поддержка нескольких языков (JS/TS, Python, Go, Java и др.)
-- Два формата вывода: JSON и человекочитаемый для LLM
+OpenCode предоставляет `lsp` tool для взаимодействия с LSP-серверами (goToDefinition, findReferences и др.), но требует точных координат символа — `line` и `character`. LLM регулярно ошибается при их определении, что приводит к неверным результатам.
 
-## Архитектура
+## Решение
+
+**Semantic LSP Plugin** перехватывает вызовы `lsp` tool через систему хуков OpenCode Plugin API:
+
+1. **Подмена интерфейса** — убирает параметры `line`/`character`, добавляет `symbol`/`fragment`
+2. **Определение координат** — читает файл, находит символ через алгоритм text-based matching, подставляет точные `line`/`character` в вызов
+3. **Обогащение ответа** — добавляет предупреждения и ошибки, помогающие LLM скорректировать запрос
 
 ```
-src/
-├── index.ts                  # Публичный API библиотеки
-├── symbolFinder.ts           # Ядро алгоритма поиска
-├── types.ts                  # Типы и интерфейсы
-├── cli.ts                    # CLI-утилита
-├── opencode-tool.ts          # Custom Tool для OpenCode
-├── formatters/
-│   ├── formatterFactory.ts   # Фабрика форматтеров
-│   ├── jsonFormatter.ts      # JSON-форматирование
-│   └── llmFormatter.ts       # Форматирование для LLM
-└── utils/
-    └── textNormalizer.ts     # Нормализация текста
+LLM вызывает lsp(filePath, operation, symbol, fragment)
+        │
+        ▼
+   tool.definition       → подмена параметров
+        │
+        ▼
+   tool.execute.before   → чтение файла → поиск символа → подстановка line/character
+        │
+        ▼
+   Оригинальный lsp tool
+        │
+        ▼
+   tool.execute.after    → обогащение ответа ошибками/предупреждениями
+        │
+        ▼
+   Обогащённый ответ для LLM
 ```
 
-## Установка и сборка
+## Поддерживаемые LSP-операции
+
+| Операция | Описание |
+|----------|----------|
+| `goToDefinition` | Переход к определению символа |
+| `findReferences` | Поиск всех ссылок на символ |
+| `hover` | Документация и тип символа |
+| `documentSymbol` | Все символы в документе |
+| `workspaceSymbol` | Поиск символов по всей workspace |
+| `goToImplementation` | Поиск реализаций интерфейса |
+| `prepareCallHierarchy` | Иерархия вызовов в позиции |
+| `incomingCalls` | Кто вызывает функцию |
+| `outgoingCalls` | Кого вызывает функция |
+
+## Установка
+
+### Сборка из исходников
 
 ```bash
+git clone <repo-url>
+cd opencode-symbol-definition-finder
 npm install
 npm run build
 ```
 
 Результат сборки:
 
-- `dist/` — скомпилированные JS-файлы библиотеки (TypeScript + tsc)
-- `dist/symbol-finder.js` — standalone ESM-бандл Custom Tool (esbuild)
+- `dist/semantic-lsp-plugin.js` — бандл плагина (esbuild, ESM)
+- `dist/symbol-finder.js` — Custom Tool для OpenCode (standalone)
+- `dist/` — скомпилированные JS-файлы библиотеки (tsc)
 
-## Использование как библиотека
+### Подключение к проекту
+
+Создайте `.opencode/plugins/semantic-lsp-plugin.js` в корне проекта:
+
+```bash
+mkdir -p .opencode/plugins
+cp dist/semantic-lsp-plugin.js .opencode/plugins/
+```
+
+Создайте `.opencode/package.json` с зависимостью от Plugin SDK:
+
+```json
+{
+  "dependencies": {
+    "@opencode-ai/plugin": "latest"
+  }
+}
+```
+
+Установите зависимости и включите LSP tool в `opencode.json`:
+
+```json
+{
+  "permission": {
+    "lsp": "allow"
+  }
+}
+```
+
+## Параметры плагина
+
+LLM передаёт параметры через `lsp` tool:
+
+| Параметр | Тип | Обязательный | Описание |
+|----------|-----|--------------|----------|
+| `filePath` | string | Да | Путь к файлу |
+| `operation` | string | Да | LSP-операция |
+| `symbol` | string | Да | Имя символа (функция, переменная, класс) |
+| `fragment` | string | Да | Фрагмент кода, содержащий символ (для дизамбигуации) |
+
+## Архитектура проекта
+
+```
+src/
+├── semantic-lsp-plugin.ts              # Plugin для OpenCode — основной продукт
+├── semantic-lsp-transformer/           # Ядро алгоритма поиска символов
+│   ├── SemanticLspTransformer.ts       # Основной класс с find() и bestEffort
+│   ├── types.ts                        # Типы: FinderResult, FinderError, ...
+│   ├── formatters/
+│   │   ├── jsonFormatter.ts            # JSON-форматирование
+│   │   ├── llmFormatter.ts             # Человекочитаемый формат для LLM
+│   │   ├── lspFormatter.ts             # Структурированный формат для plugin
+│   │   └── formatterFactory.ts         # Фабрика форматтеров
+│   ├── search/
+│   │   └── RegexSearchStrategy.ts      # Стратегия поиска на основе regex
+│   ├── validation/
+│   │   ├── ValidationChain.ts          # Цепочка валидаторов
+│   │   ├── EmptyCodeValidator.ts       # ...
+│   │   ├── EmptySymbolValidator.ts     # Валидаторы входных данных
+│   │   ├── EmptyFragmentValidator.ts   # ...
+│   │   ├── InvalidSymbolValidator.ts   # ...
+│   │   └── SymbolInFragmentValidator.ts# ...
+│   └── utils/
+│       └── textNormalizer.ts           # Нормализация текста
+├── opencode-tool.ts                    # Custom Tool (standalone symbol-finder)
+├── cli.ts                              # CLI-утилита
+├── index.ts                            # Публичный API библиотеки
+├── infra/
+│   ├── fileReader.ts                   # Интерфейс чтения файлов
+│   └── nodeFileReader.ts               # Реализация через Node.js fs
+└── skills/
+    └── go-to-definition/SKILL.md       # Навык для OpenCode
+```
+
+## Дополнительные интерфейсы
+
+### CLI
+
+```bash
+npx symbol-finder -f src/app.ts -s myFunction -F "myFunction(arg1, arg2)"
+npx symbol-finder --file code.py --symbol MyClass --fragment "MyClass()" --format llm
+npx symbol-finder -f main.go -s handler -F "handler(req)" --best-effort
+```
+
+### Библиотека
 
 ```ts
-import { SymbolFinder, LLMFormatter } from "symbol-finder";
+import { SemanticLspTransformer, LspFormatter } from "symbol-finder";
 
-const finder = new SymbolFinder();
+const finder = new SemanticLspTransformer();
 const result = finder.find({
   code: "const x = foo(1);\nfunction foo(n) { return n; }\nfoo(42);",
   symbol: "foo",
   fragment: "foo(42);",
 });
-
-const formatter = new LLMFormatter();
-console.log(formatter.format(result));
 ```
 
-Вывод:
+Режим `bestEffort: true` всегда возвращает ровно одну позицию с fallback на `{line: 1, column: 1}` при невозможности найти символ.
 
-```
-STATUS: FOUND
-MATCH_COUNT: 1
+### Custom Tool
 
-MATCHES:
-  - MATCH_1:
-      SYMBOL: foo
-      LINE: 3
-      COLUMN: 1
-      CONTEXT: |
-        function foo(n) { return n; }
-        foo(42);
-```
-
-## Использование как CLI
-
-```bash
-npx symbol-finder -f src/app.ts -s myFunction -F "myFunction(arg1, arg2)"
-npx symbol-finder --file code.py --symbol MyClass --fragment "MyClass()" --format llm
-```
-
-## Использование как OpenCode Custom Tool
-
-Скопируйте `dist/symbol-finder.js` в директорию `.opencode/tools/` вашего проекта:
-
-```bash
-mkdir -p .opencode/tools
-cp dist/symbol-finder.js .opencode/tools/
-```
-
-После этого OpenCode автоматически загрузит инструмент. Имя инструмента совпадает с именем файла — `symbol-finder`.
-
-### Параметры
-
-| Параметр   | Тип     | Обязательный | Описание                                                        |
-|------------|---------|--------------|-----------------------------------------------------------------|
-| `file`     | string  | Да           | Путь к файлу относительно корня проекта                         |
-| `symbol`   | string  | Да           | Имя символа для поиска                                          |
-| `fragment` | string  | Да           | Фрагмент кода, содержащий символ (для дизамбигуации)            |
-
-### Результат
-
-Инструмент возвращает текст в формате, оптимизированном для LLM:
-
-- `STATUS: FOUND` — символ найден, далее список совпадений с координатами (строка, колонка) и контекстом
-- `STATUS: NOT_FOUND` — символ не найден
-- `STATUS: ERROR` — ошибка (невалидный символ, символ не уникален во фрагменте и т.д.)
+`dist/symbol-finder.js` — standalone ESM-бандл, размещаемый в `.opencode/tools/`. Предоставляет прямой поиск символов без привязки к LSP.
 
 ## Тесты
 
 ```bash
-npm test           # Запуск всех тестов
-npm run test:watch # Запуск в режиме наблюдения
+npm test           # Unit + Integration (131 тест)
+npm run test:e2e   # E2E: OpenCode + clangd, поиск getUltimateAnswer() → 42
 ```
+
+## Технические требования
+
+- Node.js
+- TypeScript 6+
+- LSP-сервер, настроенный для соответствующего языка проекта (clangd для C/C++, tsserver для TS/JS и т.д.)
