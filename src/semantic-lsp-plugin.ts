@@ -241,6 +241,7 @@ export { SEMANTIC_LSP_DESCRIPTION, formatIssue, MapResultCache };
 export type { SemanticLspResultCache };
 
 export default {
+  id: "semantic-lsp",
   server: async (input: { directory: string }) => {
     return createPlugin({ getDirectory: () => input.directory });
   },
