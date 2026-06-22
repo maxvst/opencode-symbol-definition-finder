@@ -25,6 +25,7 @@ describe("Semantic LSP Plugin - Unit Tests", () => {
           },
           required: ["operation", "filePath", "line", "character"],
         },
+        jsonSchema: undefined as any,
       };
 
       await plugin["tool.definition"]({ toolID: "lsp" }, output);
@@ -35,6 +36,7 @@ describe("Semantic LSP Plugin - Unit Tests", () => {
       expect(output.parameters.properties).toHaveProperty("fragment");
       expect(output.parameters.properties).not.toHaveProperty("line");
       expect(output.parameters.properties).not.toHaveProperty("character");
+      expect(output.jsonSchema).toBe(output.parameters);
     });
 
     it("should not modify other tools", async () => {
@@ -42,6 +44,7 @@ describe("Semantic LSP Plugin - Unit Tests", () => {
       const output = {
         description: "original bash description",
         parameters: { type: "object", properties: { command: { type: "string" } } },
+        jsonSchema: undefined as any,
       };
 
       await plugin["tool.definition"]({ toolID: "bash" }, output);

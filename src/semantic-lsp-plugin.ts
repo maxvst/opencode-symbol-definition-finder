@@ -80,6 +80,7 @@ interface ToolDefinitionInput {
 interface ToolDefinitionOutput {
   description: string;
   parameters: any;
+  jsonSchema?: any;
 }
 
 interface ToolExecuteBeforeInput {
@@ -157,6 +158,7 @@ export function createPlugin(deps?: SemanticLspPluginDeps): SemanticLspHooks {
       },
       required: ["operation", "filePath", "symbol", "fragment"],
     };
+    output.jsonSchema = output.parameters;
   };
 
   const toolExecuteBeforeHook: SemanticLspHooks["tool.execute.before"] = async (input, output) => {
@@ -190,12 +192,12 @@ export function createPlugin(deps?: SemanticLspPluginDeps): SemanticLspHooks {
     cache.set(input.callID, lspResult);
 
     const match = finderResult.matches[0];
-    output.args = {
-      operation: args.operation,
-      filePath: args.filePath,
-      line: match ? match.position.line : 1,
-      character: match ? match.position.column : 1,
-    };
+    delete output.args.symbol;
+    delete output.args.fragment;
+    output.args.operation = args.operation;
+    output.args.filePath = args.filePath;
+    output.args.line = match ? match.position.line : 1;
+    output.args.character = match ? match.position.column : 1;
   };
 
   const toolExecuteAfterHook: SemanticLspHooks["tool.execute.after"] = async (input, output) => {
