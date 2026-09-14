@@ -49,7 +49,74 @@ LLM вызывает lsp(filePath, operation, symbol, fragment)
 
 ## Установка
 
-### Сборка из исходников
+Плагин распространяется как npm-пакет `opencode-semantic-lsp` (внутренний registry: выгрузка
+tarball-архива вручную, скриптов публикации в `package.json` нет). Рантайм-зависимостей пакет не
+имеет — `zod` бандлится esbuild в `dist/semantic-lsp-plugin.js`.
+
+### Из npm
+
+Активируйте плагин в `opencode.json` проекта (или глобально в `~/.config/opencode/opencode.json`):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-semantic-lsp"]
+}
+```
+
+Либо той же командой, которая ещё и допишет поле `plugin` и установит пакет:
+
+```bash
+opencode plugin opencode-semantic-lsp
+```
+
+Пин версии — стандартным синтаксисом npm:
+
+```json
+{ "plugin": ["opencode-semantic-lsp@1.0.0"] }
+```
+
+opencode установит пакет в `~/.cache/opencode/packages/<pkg>/node_modules/<pkg>` и загрузит точку
+входа `exports["./server"]` (`dist/semantic-lsp-plugin.js`). id плагина (`semantic-lsp`) задаётся в
+модуле и от имени пакета не зависит. Совместимость проверяется по `engines.opencode` (`>=1.17`).
+
+### Активация lsp tool и LSP-серверов (opencode 1.17.x)
+
+> **Независимо от способа установки** (npm / dir / ручное копирование) плагин подменяет только
+> интерфейс `lsp` tool — сами LSP-серверы активирует opencode. Нужны **все** условия одновременно.
+
+| Требование | Как выполнить |
+|------------|----------------|
+| Экспериментальный `lsp` tool | `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` (или `OPENCODE_EXPERIMENTAL=true`) в окружении процесса opencode |
+| Включённые LSP-серверы | `"lsp": true` **или** объект конфигурации LSP (например `"lsp": {"clangd": {...}}`) в `opencode.json` |
+| Бинарь LSP-сервера | `typescript-language-server`, `clangd` и т.п.: opencode скачивает и кэширует их в `~/.cache/opencode`; если задан собственный `lsp.<id>.command`, бинарь обязан быть в `PATH` |
+| Разрешение на tool | `"permission": { "lsp": "allow" }` |
+
+`opencode.json` с полным набором требований:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-semantic-lsp"],
+  "lsp": true,
+  "permission": {
+    "lsp": "allow"
+  }
+}
+```
+
+Важно:
+
+- флага `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` **недостаточно** — он включает сам tool, но не LSP-серверы;
+- без ключа `lsp` opencode 1.17.x отключает все встроенные LSP-серверы (в логе — `all LSPs are disabled`), и любой вызов `lsp` завершается ошибкой `No LSP server available for this file type.`;
+- проверка логов: при успешной активации присутствует запись `enabled LSP servers` с нужным `id` сервера.
+
+### Локальная разработка
+
+Для правки/отладки плагина можно собирать артефакты из исходников и подключать их без
+переупаковки в npm-пакет.
+
+#### Сборка из исходников
 
 ```bash
 git clone <repo-url>
@@ -64,7 +131,7 @@ npm run build
 - `dist/symbol-finder.js` — Custom Tool для OpenCode (standalone)
 - `dist/` — скомпилированные JS-файлы библиотеки (tsc)
 
-### Подключение к проекту
+#### Подключение ручным копированием
 
 Создайте `.opencode/plugins/semantic-lsp-plugin.js` в корне проекта:
 
@@ -89,34 +156,47 @@ cp dist/semantic-lsp-plugin.js .opencode/plugins/
 cd .opencode && npm install && cd ..
 ```
 
-### Активация lsp tool и LSP-серверов (opencode 1.17.x)
+#### Публикационные артефакты (`npm run pack` / `npm run pack:dir`)
 
-Плагин подменяет только интерфейс `lsp` tool — сами серверы активирует opencode. Нужны **все** условия одновременно:
+Обе команды сначала делают «чистую» подготовительную сборку (`clean` → `typecheck` →
+`build:plugin` — только бандл плагина и его `.d.ts`, без skills и рантаймов lib/cli), а затем
+упаковывают результат по полю `files`. Публикационных хуков (`prepublishOnly` / `prepack`) в
+`package.json` нет намеренно: пакет выгружается вручную.
 
-| Требование | Как выполнить |
-|------------|----------------|
-| Экспериментальный `lsp` tool | `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` (или `OPENCODE_EXPERIMENTAL=true`) в окружении процесса opencode |
-| Включённые LSP-серверы | `"lsp": true` **или** объект конфигурации LSP (например `"lsp": {"clangd": {...}}`) в `opencode.json` |
-| Бинарь LSP-сервера | `typescript-language-server`, `clangd` и т.п.: opencode скачивает и кэширует их в `~/.cache/opencode`; если задан собственный `lsp.<id>.command`, бинарь обязан быть в `PATH` |
-| Разрешение на tool | `"permission": { "lsp": "allow" }` |
+- `npm run pack` → `opencode-semantic-lsp-<version>.tgz` в корне репозитория — артефакт для
+  выгрузки во внутреннюю систему;
+- `npm run pack:dir` → `pkg/opencode-semantic-lsp/` — разархивированная директория, структурой
+  идентичная tarball.
 
-`opencode.json` с полным набором требований:
+`.tgz`, `pkg/` и `.pack-tmp/` — выходные артефакты, они в `.gitignore`.
 
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "lsp": true,
-  "permission": {
-    "lsp": "allow"
-  }
-}
+#### Dir-режим (`npm run pack:dir`)
+
+Альтернатива npm-tarball'у для «переноса» собранного плагина между машинами/проектами: `npm run
+pack:dir` готовит **разархивированную директорию** `pkg/opencode-semantic-lsp/` со структурой,
+идентичной tarball (тот же `npm pack`, состав по `files`), без самого `.tgz` на выходе.
+
+```bash
+npm run pack:dir
+# → pkg/opencode-semantic-lsp/ (package.json, README.md, LICENSE,
+#                                CHANGELOG.md, dist/semantic-lsp-plugin.js + *.d.ts)
 ```
 
-Важно:
+Подключить в проекте-потребителе — **два** рабочих варианта (оба проверены против opencode 1.18):
 
-- флага `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` **недостаточно** — он включает сам tool, но не LSP-серверы;
-- без ключа `lsp` opencode 1.17.x отключает все встроенные LSP-серверы (в логе — `all LSPs are disabled`), и любой вызов `lsp` завершается ошибкой `No LSP server available for this file type.`;
-- проверка логов: при успешной активации присутствует запись `enabled LSP servers` с нужным `id` сервера.
+1. dir-спекой в `opencode.json` consumer'а: скопировать `pkg/opencode-semantic-lsp/` целиком в корень
+   проекта-потребителя (получится `./pkg/opencode-semantic-lsp/` относительно корня consumer'а) и добавить
+   в `opencode.json` consumer'а:
+
+   ```json
+   { "plugin": ["./pkg/opencode-semantic-lsp"] }
+   ```
+
+   Относительный путь резолвится **относительно корня проекта потребителя**, поэтому `pkg/` обязан
+   лежать внутри него. Работает и абсолютный путь.
+
+2. Ручным копированием: положить `pkg/opencode-semantic-lsp/dist/semantic-lsp-plugin.js` в
+   `.opencode/plugins/` consumer'а (тот же файл, что и в npm-пакете) — см. подраздел выше.
 
 ## Параметры плагина
 
@@ -165,6 +245,9 @@ src/
 
 ## Дополнительные интерфейсы
 
+> Не входят в публикационный tarball (см. «Публикационные артефакты»). Доступны только при работе с
+> исходниками (`npm run build` — собирает lib/CLI без ограничений поля `files`).
+
 ### CLI
 
 ```bash
@@ -173,10 +256,14 @@ npx symbol-finder --file code.py --symbol MyClass --fragment "MyClass()" --forma
 npx symbol-finder -f main.go -s handler -F "handler(req)" --best-effort
 ```
 
+`symbol-finder` — это значение `package.json: bin`, оно не меняется при переименовании пакета в
+`opencode-semantic-lsp`: после установки пакета командой `npm i opencode-semantic-lsp` бинарь
+всё равно будет доступен как `symbol-finder`.
+
 ### Библиотека
 
 ```ts
-import { SemanticLspTransformer, LspFormatter } from "symbol-finder";
+import { SemanticLspTransformer, LspFormatter } from "opencode-semantic-lsp";
 
 const finder = new SemanticLspTransformer();
 const result = finder.find({

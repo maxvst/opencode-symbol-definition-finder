@@ -1,5 +1,5 @@
 {
-  "name": "symbol-finder",
+  "name": "opencode-semantic-lsp",
   "version": "1.0.0",
   "description": "Symbol finder algorithm for code navigation",
   "main": "dist/index.js",
@@ -8,13 +8,32 @@
     ".": {
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/semantic-lsp-plugin.js",
+      "types": "./dist/semantic-lsp-plugin.d.ts"
     }
   },
   "bin": {
     "symbol-finder": "./dist/cli.js"
   },
+  "engines": {
+    "opencode": ">=1.17"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!dist/skills"
+  ],
   "scripts": {
     "build": "tsc && esbuild src/opencode-tool.ts --bundle --outfile=dist/symbol-finder.js --format=esm --platform=node --external:fs --external:path && esbuild src/semantic-lsp-plugin.ts --bundle --outfile=dist/semantic-lsp-plugin.js --format=esm --platform=node --external:fs --external:path && rm -rf dist/skills && cp -r src/skills dist/skills",
+    "build:plugin": "tsc --emitDeclarationOnly && esbuild src/semantic-lsp-plugin.ts --bundle --outfile=dist/semantic-lsp-plugin.js --format=esm --platform=node --external:fs --external:path",
+    "clean": "rm -rf dist",
+    "pack:build": "npm run clean && npm run typecheck && npm run build:plugin",
+    "pack": "npm run pack:build && npm pack",
+    "pack:dir": "npm run pack:build && mkdir -p .pack-tmp && npm pack --pack-destination=.pack-tmp && tar -xzf .pack-tmp/*.tgz -C .pack-tmp && rm -rf pkg/opencode-semantic-lsp && mkdir -p pkg && mv .pack-tmp/package pkg/opencode-semantic-lsp && rm -rf .pack-tmp",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "test": "tsc --noEmit -p tsconfig.test.json && jest",
     "test:e2e": "node tests/e2e/run-e2e.js",
@@ -25,10 +44,16 @@
     "symbol",
     "finder",
     "code-navigation",
-    "lsp"
+    "lsp",
+    "opencode",
+    "opencode-plugin"
   ],
-  "author": "",
+  "author": "maxvst <max.v@mail.ru>",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxvst/opencode-symbol-definition-finder.git"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^25.5.0",
@@ -38,9 +63,7 @@
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2",
-    "yargs": "^18.0.0"
-  },
-  "dependencies": {
+    "yargs": "^18.0.0",
     "zod": "^4.3.6"
   }
 }

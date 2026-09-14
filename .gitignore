@@ -8,3 +8,6 @@ coverage/
 *.tsbuildinfo
 task_history/
 tests/e2e/fixtures/sample-project/.opencode/tools/
+pkg/
+.pack-tmp/
+*.tgz
