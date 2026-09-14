@@ -475,8 +475,11 @@ function createPlugin(deps) {
   };
   const toolExecuteBeforeHook = async (input, output) => {
     if (input.tool !== TOOL_ID) return;
+    if (!output.args || typeof output.args !== "object") return;
     const args = output.args;
-    if (!args.filePath || !args.symbol || !args.fragment) return;
+    if (!args.filePath) return;
+    const rawLine = typeof args.line === "number" && Number.isFinite(args.line) ? args.line : void 0;
+    const rawCharacter = typeof args.character === "number" && Number.isFinite(args.character) ? args.character : void 0;
     const baseDir = d.getDirectory();
     const filePath = path.resolve(baseDir, args.filePath);
     let code = "";
@@ -485,19 +488,19 @@ function createPlugin(deps) {
     }
     const finderResult = finder.find({
       code,
-      symbol: args.symbol,
-      fragment: args.fragment,
+      symbol: args.symbol ?? "",
+      fragment: args.fragment ?? "",
       bestEffort: true
     });
     const lspResult = formatter.format(finderResult);
     cache.set(input.callID, lspResult);
-    const match = finderResult.matches[0];
+    const resolved = finderResult.errors.length === 0 ? finderResult.matches[0] : void 0;
     delete output.args.symbol;
     delete output.args.fragment;
     output.args.operation = args.operation;
     output.args.filePath = args.filePath;
-    output.args.line = match ? match.position.line : 1;
-    output.args.character = match ? match.position.column : 1;
+    output.args.line = resolved ? resolved.position.line : rawLine ?? 1;
+    output.args.character = resolved ? resolved.position.column : rawCharacter ?? 1;
   };
   const toolExecuteAfterHook = async (input, output) => {
     if (input.tool !== TOOL_ID) return;

@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -6,6 +6,8 @@ import * as path from "path";
 const FIXTURE_DIR = path.resolve(__dirname, "fixtures/cpp-project");
 const PLUGIN_SOURCE = path.resolve(__dirname, "../../dist/semantic-lsp-plugin.js");
 const OPENCODE_BIN = process.env["OPENCODE_BIN"] || "opencode";
+
+const CLANGD_BIN = process.env["E2E_CLANGD_BIN"] || "";
 
 const TIMEOUT_MS = 300_000;
 
@@ -130,10 +132,39 @@ function installOpencodeDeps(opencodeDir: string): Promise<void> {
   });
 }
 
-describe("E2E: Semantic LSP plugin with clangd", () => {
+function firstLine(text: string): string {
+  const index = text.indexOf("\n");
+  return (index === -1 ? text : text.slice(0, index)).trim();
+}
+
+function probeClangd(clangdBin: string): string {
+  const result = spawnSync(clangdBin, ["--version"], { encoding: "utf8", timeout: 15_000 });
+  if (result.error || result.status !== 0) {
+    const reason = result.error ? result.error.message : `exit code ${result.status}`;
+    throw new Error(
+      `clangd binary is not runnable (${clangdBin}): ${reason}. ` +
+        "Re-run with a valid clangd path: npm run test:e2e -- --clangd <path to clangd>",
+    );
+  }
+
+  const versionLine = firstLine(result.stdout || "");
+  if (!/clangd/i.test(versionLine)) {
+    throw new Error(
+      `E2E_CLANGD_BIN does not point to clangd (${clangdBin}): "${versionLine || "empty --version output"}". ` +
+        "Re-run with a valid clangd path: npm run test:e2e -- --clangd <path to clangd>",
+    );
+  }
+  return versionLine;
+}
+
+const describeSuite = CLANGD_BIN ? describe : describe.skip;
+
+describeSuite("E2E: Semantic LSP plugin with clangd", () => {
   let tempDir: string;
 
   beforeAll(async () => {
+    console.log(`[e2e] clangd version: ${probeClangd(CLANGD_BIN)}`);
+
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "semantic-lsp-e2e-"));
 
     fs.cpSync(FIXTURE_DIR, tempDir, { recursive: true });
@@ -151,7 +182,7 @@ describe("E2E: Semantic LSP plugin with clangd", () => {
     const rootConfig = {
       lsp: {
         clangd: {
-          command: ["clangd", `--compile-commands-dir=${tempDir}`],
+          command: [CLANGD_BIN, `--compile-commands-dir=${tempDir}`],
         },
       },
       permission: {
@@ -214,10 +245,12 @@ describe("E2E: Semantic LSP plugin with clangd", () => {
       );
       expect(goToDefEvents.length).toBeGreaterThanOrEqual(1);
 
-      const completedLsp = lspEvents.filter(
+      const completedGoToDef = goToDefEvents.filter(
         (e) => e.part!.state!.status === "completed",
       );
-      for (const ev of completedLsp) {
+      expect(completedGoToDef.length).toBeGreaterThanOrEqual(1);
+
+      for (const ev of completedGoToDef) {
         const output = ev.part!.state!.output || "";
         expect(output).toContain("c.");
       }

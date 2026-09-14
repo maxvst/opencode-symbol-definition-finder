@@ -1,5 +1,18 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "lsp": true,
+  "tools": {
+    "grep": false,
+    "glob": false,
+    "read": false,
+    "bash": false,
+    "webfetch": false,
+    "websearch": false,
+    "edit": false,
+    "write": false,
+    "list": false,
+    "codesearch": false
+  },
   "permission": {
     "lsp": "allow"
   }

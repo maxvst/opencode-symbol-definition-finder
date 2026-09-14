@@ -8,6 +8,9 @@ const SKILL_SOURCE = path.resolve(__dirname, "../../dist/skills/go-to-definition
 const OPENCODE_DIR = path.join(FIXTURE_DIR, ".opencode");
 const TOOLS_DIR = path.join(OPENCODE_DIR, "tools");
 const TOOL_DEST = path.join(TOOLS_DIR, "symbol-finder.js");
+const PLUGIN_SOURCE = path.resolve(__dirname, "../../dist/semantic-lsp-plugin.js");
+const PLUGINS_DIR = path.join(OPENCODE_DIR, "plugins");
+const PLUGIN_DEST = path.join(PLUGINS_DIR, "semantic-lsp-plugin.js");
 const SKILLS_DIR = path.join(OPENCODE_DIR, "skills", "go-to-definition");
 const SKILL_DEST = path.join(SKILLS_DIR, "SKILL.md");
 const OPENCODE_BIN = process.env["OPENCODE_BIN"] || "opencode";
@@ -113,7 +116,7 @@ function installOpencodeDeps(): Promise<void> {
 }
 
 function warmUpLsp(): Promise<void> {
-  const cmd = `script -q -c '${OPENCODE_BIN} run --format json --dir ${FIXTURE_DIR} "Call the lsp tool with operation documentSymbol, filePath src/main.ts, line 1, character 1. Then stop."' /dev/null`;
+  const cmd = `script -q -c '${OPENCODE_BIN} run --format json --dir ${FIXTURE_DIR} "Call the lsp tool with operation documentSymbol, filePath src/main.ts, symbol calculateSum, fragment const total = calculateSum(5, 10). Then stop."' /dev/null`;
   const proc = spawn("bash", ["-c", cmd], {
     stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env, OPENCODE_EXPERIMENTAL_LSP_TOOL: "true" },
@@ -141,6 +144,8 @@ describe("E2E: go-to-definition skill with symbol-finder and LSP", () => {
   beforeAll(async () => {
     fs.mkdirSync(TOOLS_DIR, { recursive: true });
     fs.copyFileSync(TOOL_SOURCE, TOOL_DEST);
+    fs.mkdirSync(PLUGINS_DIR, { recursive: true });
+    fs.copyFileSync(PLUGIN_SOURCE, PLUGIN_DEST);
     fs.mkdirSync(SKILLS_DIR, { recursive: true });
     fs.copyFileSync(SKILL_SOURCE, SKILL_DEST);
     await installOpencodeDeps();
@@ -200,14 +205,19 @@ describe("E2E: go-to-definition skill with symbol-finder and LSP", () => {
       const gtdOutput = goToDefEvents[0]!.part!.state!.output!;
       expect(gtdOutput).toContain("math.ts");
 
-      for (const forbidden of FORBIDDEN_TOOLS) {
-        expect(toolNames.has(forbidden)).toBe(false);
-      }
+      const usedForbidden = FORBIDDEN_TOOLS.filter((tool) => toolNames.has(tool));
+      expect(usedForbidden).toEqual([]);
 
       const textEvents = events.filter(
         (e) => e.type === "text" && e.part?.type === "text" && e.part.text,
       );
       const fullText = textEvents.map((e) => e.part!.text!).join(" ");
+      if (!fullText) {
+        throw new Error(
+          `the model finished without an assistant text message (tools used: ${[...toolNames].join(", ") || "none"}); ` +
+            "this looks like a provider/model flake, re-run the suite",
+        );
+      }
       expect(fullText.toLowerCase()).toContain("math.ts");
     },
     TIMEOUT_MS,

@@ -228,6 +228,174 @@ int baz() { return foo(); }
       const cached = cachedResults.get("call4")!;
       expect(cached.warnings.length).toBeGreaterThan(0);
     });
+
+    it("should resolve position and strip symbol/fragment when both are empty strings", async () => {
+      const cachedResults: Map<string, LspFormattedResult> = new Map();
+      const cache = {
+        get: (id: string) => cachedResults.get(id),
+        set: (id: string, r: LspFormattedResult) => cachedResults.set(id, r),
+        delete: (id: string) => cachedResults.delete(id),
+      };
+
+      const plugin = createPlugin({
+        fileExists: () => true,
+        readFile: () => SAMPLE_CODE,
+        createCache: () => cache,
+      });
+
+      const output = {
+        args: {
+          operation: "goToDefinition",
+          filePath: "main.cpp",
+          symbol: "",
+          fragment: "",
+        },
+      };
+
+      await plugin["tool.execute.before"](
+        { tool: "lsp", sessionID: "s1", callID: "call5" },
+        output,
+      );
+
+      expect(output.args).toEqual({
+        operation: "goToDefinition",
+        filePath: "main.cpp",
+        line: 1,
+        character: 1,
+      });
+      expect((output.args as any).symbol).toBeUndefined();
+      expect((output.args as any).fragment).toBeUndefined();
+
+      const cached = cachedResults.get("call5")!;
+      expect(cached.errors.length).toBeGreaterThan(0);
+    });
+
+    it("should resolve whitespace-only symbol/fragment and provide numeric coordinates", async () => {
+      const cachedResults: Map<string, LspFormattedResult> = new Map();
+      const cache = {
+        get: (id: string) => cachedResults.get(id),
+        set: (id: string, r: LspFormattedResult) => cachedResults.set(id, r),
+        delete: (id: string) => cachedResults.delete(id),
+      };
+
+      const plugin = createPlugin({
+        fileExists: () => true,
+        readFile: () => SAMPLE_CODE,
+        createCache: () => cache,
+      });
+
+      const output = {
+        args: {
+          operation: "documentSymbol",
+          filePath: "main.cpp",
+          symbol: "   ",
+          fragment: "  ",
+        },
+      };
+
+      await plugin["tool.execute.before"](
+        { tool: "lsp", sessionID: "s1", callID: "call6" },
+        output,
+      );
+
+      expect(typeof (output.args as any).line).toBe("number");
+      expect(typeof (output.args as any).character).toBe("number");
+      expect((output.args as any).symbol).toBeUndefined();
+      expect((output.args as any).fragment).toBeUndefined();
+      expect(cachedResults.has("call6")).toBe(true);
+    });
+
+    it("should override raw line/character when symbol resolves to a match", async () => {
+      const cachedResults: Map<string, LspFormattedResult> = new Map();
+      const cache = {
+        get: (id: string) => cachedResults.get(id),
+        set: (id: string, r: LspFormattedResult) => cachedResults.set(id, r),
+        delete: (id: string) => cachedResults.delete(id),
+      };
+
+      const plugin = createPlugin({
+        fileExists: () => true,
+        readFile: () => SAMPLE_CODE,
+        createCache: () => cache,
+      });
+
+      const output = {
+        args: {
+          operation: "goToDefinition",
+          filePath: "main.cpp",
+          symbol: "getUltimateAnswer",
+          fragment: "getUltimateAnswer()",
+          line: 99,
+          character: 99,
+        },
+      };
+
+      await plugin["tool.execute.before"](
+        { tool: "lsp", sessionID: "s1", callID: "call7" },
+        output,
+      );
+
+      expect(output.args).toEqual({
+        operation: "goToDefinition",
+        filePath: "main.cpp",
+        line: 4,
+        character: 18,
+      });
+      expect(cachedResults.get("call7")!.errors).toHaveLength(0);
+    });
+
+    it("should keep raw line/character when nothing was resolved", async () => {
+      const cachedResults: Map<string, LspFormattedResult> = new Map();
+      const cache = {
+        get: (id: string) => cachedResults.get(id),
+        set: (id: string, r: LspFormattedResult) => cachedResults.set(id, r),
+        delete: (id: string) => cachedResults.delete(id),
+      };
+
+      const plugin = createPlugin({
+        fileExists: () => true,
+        readFile: () => SAMPLE_CODE,
+        createCache: () => cache,
+      });
+
+      const output = {
+        args: {
+          operation: "hover",
+          filePath: "main.cpp",
+          symbol: "nonExistentSymbol",
+          fragment: "nonExistentSymbol()",
+          line: 7,
+          character: 3,
+        },
+      };
+
+      await plugin["tool.execute.before"](
+        { tool: "lsp", sessionID: "s1", callID: "call8" },
+        output,
+      );
+
+      expect(output.args).toEqual({
+        operation: "hover",
+        filePath: "main.cpp",
+        line: 7,
+        character: 3,
+      });
+
+      const cached = cachedResults.get("call8")!;
+      expect(cached.errors.length).toBeGreaterThan(0);
+    });
+
+    it("should skip when args are missing", async () => {
+      const plugin = createPlugin();
+      const output = { args: undefined as any };
+
+      await plugin["tool.execute.before"](
+        { tool: "lsp", sessionID: "s1", callID: "call9" },
+        output,
+      );
+
+      expect(output.args).toBeUndefined();
+    });
   });
 
   describe("tool.execute.after hook", () => {

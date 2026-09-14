@@ -83,15 +83,40 @@ cp dist/semantic-lsp-plugin.js .opencode/plugins/
 }
 ```
 
-Установите зависимости и включите LSP tool в `opencode.json`:
+Установите зависимости:
+
+```bash
+cd .opencode && npm install && cd ..
+```
+
+### Активация lsp tool и LSP-серверов (opencode 1.17.x)
+
+Плагин подменяет только интерфейс `lsp` tool — сами серверы активирует opencode. Нужны **все** условия одновременно:
+
+| Требование | Как выполнить |
+|------------|----------------|
+| Экспериментальный `lsp` tool | `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` (или `OPENCODE_EXPERIMENTAL=true`) в окружении процесса opencode |
+| Включённые LSP-серверы | `"lsp": true` **или** объект конфигурации LSP (например `"lsp": {"clangd": {...}}`) в `opencode.json` |
+| Бинарь LSP-сервера | `typescript-language-server`, `clangd` и т.п.: opencode скачивает и кэширует их в `~/.cache/opencode`; если задан собственный `lsp.<id>.command`, бинарь обязан быть в `PATH` |
+| Разрешение на tool | `"permission": { "lsp": "allow" }` |
+
+`opencode.json` с полным набором требований:
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": true,
   "permission": {
     "lsp": "allow"
   }
 }
 ```
+
+Важно:
+
+- флага `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` **недостаточно** — он включает сам tool, но не LSP-серверы;
+- без ключа `lsp` opencode 1.17.x отключает все встроенные LSP-серверы (в логе — `all LSPs are disabled`), и любой вызов `lsp` завершается ошибкой `No LSP server available for this file type.`;
+- проверка логов: при успешной активации присутствует запись `enabled LSP servers` с нужным `id` сервера.
 
 ## Параметры плагина
 
@@ -170,12 +195,27 @@ const result = finder.find({
 ## Тесты
 
 ```bash
-npm test           # Unit + Integration (131 тест)
-npm run test:e2e   # E2E: OpenCode + clangd, поиск getUltimateAnswer() → 42
+npm test                                        # Unit + Integration
+npm run test:e2e                                # E2E без clangd (сюита semantic-lsp пропускается)
+npm run test:e2e -- --clangd /path/to/clangd    # E2E целиком, включая clangd-сюиту
 ```
+
+E2E-тесты требуют `opencode` в `PATH` (или `OPENCODE_BIN=/path/to/opencode`) и активации `lsp` tool (см. выше).
+
+Сюита `tests/e2e/semantic-lsp.test.ts` зависит от бинаря `clangd` и по умолчанию **пропускается** — прогон остаётся зелёным, а в конце выводится подсказка, как включить эти тесты. Путь к `clangd` задаётся только явно через `--clangd`: никакие поиски в `PATH` или кэше opencode не выполняются, пропустить сюиту «специальным флагом» нельзя — её просто не запускают.
+
+Прогон запускается скриптом `tests/e2e/run-e2e.js` в два шага: `(1/2) build` (сам `npm run build`) и `(2/2) jest`. Ошибки делятся на два класса:
+
+- **некорректный вызов** (`--clangd` без значения, повтор флага, значение `auto`) — баннер `E2E RUN ABORTED`, прерывание до сборки, ни один тест не запускается;
+- **проблема с самим бинарём** (путь не найден, это не файл, `--version` не запускается, вывод не похож на clangd) — сразу печатается баннер `INVALID CLANGD PATH`, но прогон продолжается: сюиты, не зависящие от clangd, выполняются как обычно, а `semantic-lsp.test.ts` падает с той же диагностикой, и итоговый код прогона ненулевой.
+
+Вывод сборки при успехе сворачивается в строку `build ... ok (1.6s)`: сообщения esbuild вида «Done in 30ms» иначе читаются как результаты тестов. Полный вывод сборки показывается только когда сборка упала.
+
+Проверенный путь попадает в конфигурацию фикстуры как `lsp.clangd.command[0]`, поэтому `clangd` не обязан быть в `PATH` (важно для Windows).
 
 ## Технические требования
 
 - Node.js
 - TypeScript 6+
 - LSP-сервер, настроенный для соответствующего языка проекта (clangd для C/C++, tsserver для TS/JS и т.д.)
+- Для E2E: `OPCODE_EXPERIMENTAL_LSP_TOOL=true`, `"lsp": true` в конфигурации фикстуры; clangd-проверки — через `npm run test:e2e -- --clangd <path>`
