@@ -1,16 +1,36 @@
-# Changelog
+# Журнал изменений
 
-All notable changes to this project will be documented in this file.
+Все значимые изменения в этом проекте документируются в этом файле.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
+и этот проект придерживается [семантического версионирования](https://semver.org/lang/ru/).
+
+## [1.1.0] - 2026-09-15
+
+### Добавлено
+
+- Добавлены проверки целостности пакета: содержимое упакованной директории, разрешение
+  `exports["./server"]`, форма модуля плагина, самодостаточность бандла и `engines.opencode`,
+  а также smoke-тест ручного копирования в `.opencode/plugins`.
+
+### Изменено
+
+- Публикуемый пакет теперь строго ограничен распространением плагина OpenCode: манифест
+  предоставляет только `exports["./server"]`, а в состав пакета входит белый список из бандла
+  плагина, его типов и документации. Поля `main`, верхнеуровневые `types`, `bin`, корневой экспорт
+  библиотеки и `dist/skills` больше не включаются; CLI и библиотека доступны только из сборки
+  исходников.
+- E2E-проверки теперь загружают собранный дистрибутив как модуль через `pkg/opencode-semantic-lsp`
+  и dir-спеку `plugin`; `tests/e2e/run-e2e.js` сначала готовит публикационный артефакт, затем
+  полный `dist/`, после чего запускает Jest.
 
 ## [1.0.0] - 2026-09-14
 
-### Added
+### Добавлено
 
-- Initial release of the `opencode-semantic-lsp` OpenCode plugin.
-- `semantic-lsp` plugin that overrides the built-in `lsp` tool interface: replaces `line`/`character`
-  parameters with `symbol`/`fragment` and resolves exact coordinates before invoking the LSP server.
-- npm packaging for distribution through an internal registry: `exports["./server"]` entrypoint,
-  `engines.opencode`, controlled `files`, and `pack` / `pack:dir` build scripts.
+- Первый релиз OpenCode-плагина `opencode-semantic-lsp`.
+- Плагин `semantic-lsp`, который подменяет интерфейс встроенного `lsp` tool: заменяет параметры
+  `line`/`character` на `symbol`/`fragment` и определяет точные координаты перед обращением
+  к LSP-серверу.
+- npm-упаковка для распространения через внутренний registry: точка входа `exports["./server"]`,
+  `engines.opencode`, контролируемый состав `files` и скрипты сборки `pack` / `pack:dir`.
