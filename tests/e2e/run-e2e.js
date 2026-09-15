@@ -19,6 +19,9 @@ const green = (text) => colorize("32", text);
 const bold = (text) => colorize("1", text);
 
 const rootDir = path.resolve(__dirname, "..", "..");
+const PACKAGE_DIR = path.join(rootDir, "pkg", "opencode-semantic-lsp");
+const PACKAGE_PLUGIN_BUNDLE = path.join(PACKAGE_DIR, "dist", "semantic-lsp-plugin.js");
+const PACKAGE_DIR_ENV = "E2E_PACKAGE_DIR";
 
 function firstLine(text) {
   const index = text.indexOf("\n");
@@ -117,37 +120,52 @@ function seconds(startedAt) {
   return `${((Date.now() - startedAt) / 1000).toFixed(1)}s`;
 }
 
-function runBuild() {
+function runNpmStep(label, script, failedSummary) {
   const startedAt = Date.now();
-  process.stdout.write("[e2e] (1/2) build ... ");
+  process.stdout.write(`${label} ... `);
 
-  const build = spawnSync(IS_WINDOWS ? "npm.cmd" : "npm", ["run", "build"], {
+  const step = spawnSync(IS_WINDOWS ? "npm.cmd" : "npm", ["run", script], {
     cwd: rootDir,
     encoding: "utf8",
     shell: IS_WINDOWS,
     env: process.env,
   });
 
-  if (build.error || build.status !== 0) {
+  if (step.error || step.status !== 0) {
     process.stdout.write(`${red("FAILED")}\n`);
-    const reason = build.error ? build.error.message : `exit code ${build.status}`;
-    const output = [build.stdout, build.stderr].filter(Boolean).join("\n").trim();
+    const reason = step.error ? step.error.message : `exit code ${step.status}`;
+    const output = [step.stdout, step.stderr].filter(Boolean).join("\n").trim();
     if (output) console.error(output);
-    abort("npm run build failed", [`reason: ${reason}`], ["no tests were started"]);
+    abort(failedSummary, [`reason: ${reason}`], ["no tests were started"]);
   }
 
   process.stdout.write(`${green("ok")} (${seconds(startedAt)})\n`);
 }
 
+// Order pack:dir -> build is mandatory: pack:dir cleans `dist/` and rebuilds only the plugin,
+// while the full `build` afterwards restores the complete `dist/` (symbol-finder.js, skills, bundle)
+// without touching `pkg/`.
+function runBuild() {
+  runNpmStep("[e2e] (1/3) distributable", "pack:dir", "npm run pack:dir failed");
+  runNpmStep("[e2e] (2/3) build dist", "build", "npm run build failed");
+
+  if (!fs.existsSync(PACKAGE_PLUGIN_BUNDLE)) {
+    abort("distributable plugin package is missing", [
+      `expected: ${PACKAGE_PLUGIN_BUNDLE}`,
+    ], ["`npm run pack:dir` did not produce the installable plugin package"]);
+  }
+}
+
 function runJest(jestArgs, clangdBin) {
   const env = { ...process.env };
+  env[PACKAGE_DIR_ENV] = PACKAGE_DIR;
   if (clangdBin) {
     env[CLANGD_ENV] = clangdBin;
   } else {
     delete env[CLANGD_ENV];
   }
 
-  process.stdout.write("[e2e] (2/2) jest ... \n");
+  process.stdout.write("[e2e] (3/3) jest ... \n");
   const result = spawnSync(
     process.execPath,
     [path.join(rootDir, "node_modules", "jest", "bin", "jest.js"), "--config", path.join(rootDir, "jest.e2e.config.js"), ...jestArgs],

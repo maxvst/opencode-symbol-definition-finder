@@ -170,6 +170,8 @@ cd .opencode && npm install && cd ..
 
 `.tgz`, `pkg/` и `.pack-tmp/` — выходные артефакты, они в `.gitignore`.
 
+Дистрибутив контролируется тестами: быстрый integrity-сьют `npm test` проверяет собранный `pkg/opencode-semantic-lsp/` по метаданным и форме модуля, а plugin-e2e (`npm run test:e2e`) загружают этот же артефакт **как модуль** через dir-спеку `plugin` → `exports["./server"]` (подробнее — в разделе «Тесты»).
+
 #### Dir-режим (`npm run pack:dir`)
 
 Альтернатива npm-tarball'у для «переноса» собранного плагина между машинами/проектами: `npm run
@@ -282,16 +284,20 @@ const result = finder.find({
 ## Тесты
 
 ```bash
-npm test                                        # Unit + Integration
+npm test                                        # Unit + Integration + целостность пакета
 npm run test:e2e                                # E2E без clangd (сюита semantic-lsp пропускается)
 npm run test:e2e -- --clangd /path/to/clangd    # E2E целиком, включая clangd-сюиту
 ```
+
+`npm test` дополнительно прогоняет быстрый **не-LLM сьют целостности публикационного пакета** (`tests/packaging/publish-integrity.test.ts`, офлайн): он собирает артефакт через `npm run pack:dir` и проверяет состав по `files`, резолв `exports["./server"]` на существующий файл внутри пакета, форму собранного модуля (`default{id, server}` + три хука `tool.definition`/`tool.execute.before`/`tool.execute.after`), самодостаточность бандла (только `fs`/`path`) и гейт `engines.opencode`. Для повторного прогона без пересборки — `SKIP_PACK_BUILD=1 npm test`.
+
+Дистрибутив проверяется **загрузкой как модуль** (не ручным copy): plugin-e2e подключают плагин через `opencode.json: plugin: ["<ABS>/pkg/opencode-semantic-lsp"]` → `package.json: exports["./server"]` → `import()` собранного бандла (`tests/e2e/lsp-tool-definition.test.ts`, `semantic-lsp.test.ts`, `lsp-goto-definition.test.ts`). Временные consumer-проекты создаются внутри репозитория (`.e2e-tmp/`, чтобы opencode резолвил `node_modules`/`tsserver`), фикстуры не мутируются. Ручное копирование loose-файла сохранено ровно в одном smoke-тесте (`tests/e2e/plugins-dir-manual-copy.smoke.test.ts`).
 
 E2E-тесты требуют `opencode` в `PATH` (или `OPENCODE_BIN=/path/to/opencode`) и активации `lsp` tool (см. выше).
 
 Сюита `tests/e2e/semantic-lsp.test.ts` зависит от бинаря `clangd` и по умолчанию **пропускается** — прогон остаётся зелёным, а в конце выводится подсказка, как включить эти тесты. Путь к `clangd` задаётся только явно через `--clangd`: никакие поиски в `PATH` или кэше opencode не выполняются, пропустить сюиту «специальным флагом» нельзя — её просто не запускают.
 
-Прогон запускается скриптом `tests/e2e/run-e2e.js` в два шага: `(1/2) build` (сам `npm run build`) и `(2/2) jest`. Ошибки делятся на два класса:
+Прогон запускается скриптом `tests/e2e/run-e2e.js` в три шага: `(1/3) distributable` (`npm run pack:dir` — публикационный артефакт `pkg/opencode-semantic-lsp/`), `(2/3) build dist` (`npm run build` — полный `dist/` для manual-copy smoke и tool-ассетов) и `(3/3) jest`. Порядок `pack:dir → build` обязателен: `pack:dir` чистит `dist/` и пересобирает только плагин, а `build` затем восстанавливает полный `dist/`, не трогая `pkg/`. Перед запуском jest проверяется наличие `pkg/opencode-semantic-lsp/dist/semantic-lsp-plugin.js`; в окружение jest пробрасывается `E2E_PACKAGE_DIR`. Ошибки делятся на два класса:
 
 - **некорректный вызов** (`--clangd` без значения, повтор флага, значение `auto`) — баннер `E2E RUN ABORTED`, прерывание до сборки, ни один тест не запускается;
 - **проблема с самим бинарём** (путь не найден, это не файл, `--version` не запускается, вывод не похож на clangd) — сразу печатается баннер `INVALID CLANGD PATH`, но прогон продолжается: сюиты, не зависящие от clangd, выполняются как обычно, а `semantic-lsp.test.ts` падает с той же диагностикой, и итоговый код прогона ненулевой.

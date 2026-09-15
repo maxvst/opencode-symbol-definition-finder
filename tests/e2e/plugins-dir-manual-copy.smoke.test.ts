@@ -1,5 +1,8 @@
+import * as path from "path";
 import { JsonEvent, parseJsonOutput, runOpenCode, TIMEOUT_MS } from "./helpers/opencode";
 import { ConsumerProject, makeConsumerProject } from "./helpers/consumer";
+
+const PLUGIN_SOURCE = path.resolve(__dirname, "../../dist/semantic-lsp-plugin.js");
 
 function assistantText(events: JsonEvent[]): string {
   return events
@@ -8,11 +11,16 @@ function assistantText(events: JsonEvent[]): string {
     .join(" ");
 }
 
-describe("E2E: lsp tool loaded as a module changes its own definition", () => {
+// Single manual-copy smoke: preserves coverage for the dev-time loose-file path
+// (`{plugin,plugins}/*.{ts,js}` auto-scan) — the ONLY e2e that copies a raw `.js`.
+describe("E2E smoke: loose-file plugin in .opencode/plugins is autodiscovered", () => {
   let project: ConsumerProject | undefined;
 
   beforeAll(() => {
-    project = makeConsumerProject();
+    project = makeConsumerProject({
+      skipPluginSpec: true,
+      files: [{ source: PLUGIN_SOURCE, target: ".opencode/plugins/semantic-lsp-plugin.js" }],
+    });
   });
 
   afterAll(() => {
@@ -20,7 +28,7 @@ describe("E2E: lsp tool loaded as a module changes its own definition", () => {
   });
 
   it(
-    "should report lsp tool parameters as fragment and symbol, not line and character",
+    "should list lsp parameters (fragment, symbol) after loose-file copy",
     async () => {
       if (!project) {
         throw new Error("consumer project was not initialized");
@@ -40,8 +48,6 @@ describe("E2E: lsp tool loaded as a module changes its own definition", () => {
 
       expect(fullText).toContain("fragment");
       expect(fullText).toContain("symbol");
-      expect(fullText).not.toMatch(/\bline\b/);
-      expect(fullText).not.toMatch(/\bcharacter\b/);
     },
     TIMEOUT_MS,
   );
