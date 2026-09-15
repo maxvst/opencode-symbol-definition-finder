@@ -181,7 +181,8 @@ pack:dir` готовит **разархивированную директори
 ```bash
 npm run pack:dir
 # → pkg/opencode-semantic-lsp/ (package.json, README.md, LICENSE,
-#                                CHANGELOG.md, dist/semantic-lsp-plugin.js + *.d.ts)
+#                                CHANGELOG.md, dist/semantic-lsp-plugin.js,
+#                                dist/semantic-lsp-plugin.d.ts)
 ```
 
 Подключить в проекте-потребителе — **два** рабочих варианта (оба проверены против opencode 1.18):
@@ -253,19 +254,19 @@ src/
 ### CLI
 
 ```bash
-npx symbol-finder -f src/app.ts -s myFunction -F "myFunction(arg1, arg2)"
-npx symbol-finder --file code.py --symbol MyClass --fragment "MyClass()" --format llm
-npx symbol-finder -f main.go -s handler -F "handler(req)" --best-effort
+node dist/cli.js -f src/app.ts -s myFunction -F "myFunction(arg1, arg2)"
+node dist/cli.js --file code.py --symbol MyClass --fragment "MyClass()" --format llm
+node dist/cli.js -f main.go -s handler -F "handler(req)" --best-effort
 ```
 
-`symbol-finder` — это значение `package.json: bin`, оно не меняется при переименовании пакета в
-`opencode-semantic-lsp`: после установки пакета командой `npm i opencode-semantic-lsp` бинарь
-всё равно будет доступен как `symbol-finder`.
+Поля `bin` в `package.json` нет: CLI не устанавливается из npm-пакета и запускается только из
+собранных исходников репозитория.
 
 ### Библиотека
 
 ```ts
-import { SemanticLspTransformer, LspFormatter } from "opencode-semantic-lsp";
+// только из исходников репозитория (после `npm run build`); из npm-пакета библиотека не резолвится
+import { SemanticLspTransformer, LspFormatter } from "./dist/index.js";
 
 const finder = new SemanticLspTransformer();
 const result = finder.find({

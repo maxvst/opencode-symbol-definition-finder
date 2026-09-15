@@ -24,6 +24,17 @@ const PKG_SPEC = "opencode-semantic-lsp@dir";
 const BUNDLE_REL = path.join("dist", "semantic-lsp-plugin.js");
 const ALLOWED_EXTERNALS = new Set(["fs", "path"]);
 
+// Exact publish content: the lsp-tool wrapper (bundle + its types) and docs, nothing else.
+// npm reports tarball paths with "/" separators on every platform.
+const ALLOWED_PUBLISHED_FILES = [
+  "CHANGELOG.md",
+  "LICENSE",
+  "README.md",
+  "package.json",
+  "dist/semantic-lsp-plugin.js",
+  "dist/semantic-lsp-plugin.d.ts",
+];
+
 const PACK_BUILD_TIMEOUT_MS = 300_000;
 
 const pkgJsonPath = path.join(PKG_DIR, "package.json");
@@ -102,25 +113,10 @@ describe("Packaging: publishable integrity of opencode-semantic-lsp", () => {
     tempDirs = [];
   });
 
-  describe("1. publishable file list (files field)", () => {
-    it("includes the plugin entry, document files and package.json", () => {
-      const bundled = publishablePaths();
-      for (const required of ["package.json", "README.md", "LICENSE", "CHANGELOG.md", BUNDLE_REL]) {
-        expect(bundled).toContain(required);
-      }
-    });
-
-    it("excludes skills and runtime tool/cli bundles from the publication build", () => {
-      const packaged = fs.existsSync(PKG_DIR)
-        ? ["dist/skills", "dist/symbol-finder.js", "dist/cli.js"].filter((entry) =>
-            fs.existsSync(path.join(PKG_DIR, entry)),
-          )
-        : [];
-      expect(packaged).toEqual([]);
-
-      // `!dist/skills` is the field-driven exclusion; verify it via npm pack itself too.
-      const bundled = publishablePaths();
-      expect(bundled.filter((p) => p.startsWith("dist/skills/"))).toEqual([]);
+  describe("1. publishable file list (exact allow-list)", () => {
+    it("packages exactly the allow-list and nothing else", () => {
+      const actual = [...new Set(publishablePaths())].sort();
+      expect(actual).toEqual([...ALLOWED_PUBLISHED_FILES].sort());
     });
   });
 

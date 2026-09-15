@@ -2,30 +2,21 @@
   "name": "opencode-semantic-lsp",
   "version": "1.0.0",
   "description": "Symbol finder algorithm for code navigation",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "exports": {
-    ".": {
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
     "./server": {
       "import": "./dist/semantic-lsp-plugin.js",
       "types": "./dist/semantic-lsp-plugin.d.ts"
     }
   },
-  "bin": {
-    "symbol-finder": "./dist/cli.js"
-  },
   "engines": {
     "opencode": ">=1.17"
   },
   "files": [
-    "dist",
+    "dist/semantic-lsp-plugin.js",
+    "dist/semantic-lsp-plugin.d.ts",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md",
-    "!dist/skills"
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc && esbuild src/opencode-tool.ts --bundle --outfile=dist/symbol-finder.js --format=esm --platform=node --external:fs --external:path && esbuild src/semantic-lsp-plugin.ts --bundle --outfile=dist/semantic-lsp-plugin.js --format=esm --platform=node --external:fs --external:path && rm -rf dist/skills && cp -r src/skills dist/skills",
